@@ -1,0 +1,20 @@
+{
+  "name": "01-podstawy",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "npm test",
+    "start": "node index.js",
+    "lint": "eslint ."
+  },
+  "author": "Jacek Pietrzak",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^16.0.3",
+    "lodash": "^4.17.21"
+  },
+  "devDependencies": {
+    "eslint": "^8.35.0"
+  }
+}

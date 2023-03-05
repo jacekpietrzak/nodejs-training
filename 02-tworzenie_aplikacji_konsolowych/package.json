@@ -1,0 +1,16 @@
+{
+  "name": "02-tworzenie_aplikacji_konsolowych",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "npm test",
+    "start": "node index.js"
+  },
+  "author": "Jacek Pietrzak",
+  "license": "ISC",
+  "dependencies": {
+    "colors": "^1.4.0",
+    "commander": "^10.0.0"
+  }
+}
