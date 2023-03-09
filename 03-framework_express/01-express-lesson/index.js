@@ -7,6 +7,7 @@ const app = express();
  * jesli w middleware nie uzyjemy metody next to wpadniemy w nieskonczona petle bo aplikacja zatrzyma sie na funkcji middleware. Next powoduje ze aplikacja wykonuje sie dalej.
  */
 /** Middleware */
+/** w ten sposob definiujemy middleware globalnie dla kazdego przychodzacego requestu*/
 app.use((req, res, next) => {
   /** wykonaj logike np
    * autentykacja uzytkownika, autoryzacja
@@ -57,7 +58,8 @@ const middleware = (req, res, next) => {
  */
 
 app.get("/", middleware, (req, res) => {
-  //   console.log(req);
+  // console.log("req", req);
+  console.log("res", res);
   //   res.send("Siema!!");
   const response = {
     topic: "Node.js + express",

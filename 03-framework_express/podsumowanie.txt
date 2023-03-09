@@ -1,0 +1,28 @@
+aby uzywac expressa nalezy
+1. Utworzyc plik package.json dla aplikacji poprzez "npm init -y" -y aby nie klikac pokolei enter tylko defaulotwo zatwierdzic wszystkie pytania.
+2. Zainstalowac expressjs poprzez "npm install express"
+    2.1 instalujemy pakiet nodemon jako devDependencies poprzez "npm install --save-dev nodemon"
+    2.2 dodajemy do package.json skrypty dla wlacznia index.js: 
+        2.2.1 "start": "node index.js"
+        2.2.2 "start:dev": "nodemon"
+3. Dodac go do naszego projektu poprzez "const express = require('express')"
+4. Powiedziec ze inicjujemy apke expressowa poprzez "const app = express()"
+5. Jesli bedziemy wysylac do expressa jakies dane to musimy mu powiedziec jakiego typu to beda dane za pomoca: * app.use(express.urlencoded({ extended: false })) albo app.use(express.json());
+6. Mozemy przejsc do pisania naszych handlerow dla GET, POST, PUT, DELETE. 
+7. Jak juz mamy napisane handlery to musimy mu powiedziec zeby sluchal poprzez "app.listen(numer portu, () => {console.log('Example app listening on port 3000!');})"
+8. jesli chcemy to mozemy wprowadzic funkcje middleware ktore bedziemy stosowac miedzy requestami i mozemy je tez stosowac w wybranych metodach komunikacji z API.
+9. Tworzymy folder routes - tutaj bedziemy tworzyc nasza logike 
+10. W folderze routes tworzymy osobny plik dla kazdej logiki. Naming convention mowi ze kazdy plik powinien przyjmowac nazwe w liczbie mnogiej
+11. W folderze routes tworzymy plik routes.js
+    11.1 importujemy express
+    11.2 definiujemy zmienna router = express.Router() (nie nazywamy app - jedynie kwestia nazywnictwa aby wystrzegac sie bledow w przyszlosci )
+    11.3 exportujemy modul - module.exports = { router };
+12. Importujemy router do kazdego pliku w folderze router z nasza logika.
+13. W routes.js importujemy kazdy route logiki ktory stworzylismy (const { lessonRoute } = require("./lessons"))
+14. W routes.js dodajemy linijke ktora mowi ze wszystkie zapytania ktore przychodza na dany adres mamy kierowac na odpowiedni router (router.use("/lessons", lessonsRouter);)
+15. Importujemy glowny router do glownego pliku index.js (const { router } = require("./routes/routes.js"))
+16. W glownym pliku index.js musimy powiedziec aby uzywal naszego glownego routera. (app.use(router))
+17. Jesli mamy jakies funkcje ktore chcemy uzyc jako middleware, mozemy stworzyc dodatkowy folder "helpers" i w nim utworzyc osobny plik js dla kazdego middleware
+    17.1 exportujemy modul (module.exports = { logger };)
+    17.2 importujemy go w pliku routea w ktorym chcemy go uzyc (const { logger } = require("../helpers/logger.js");)
+18. 

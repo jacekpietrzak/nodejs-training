@@ -1,9 +1,0 @@
-aby uzywac expressa nalezy
-1. Utworzyc plik package.json dla aplikacji poprzez "$ npm init -y" -y aby nie klikac pokolei enter tylko defaulotwo zatwierdzic wszystkie pytania.
-2. Zainstalowac expressjs poprzez "$ npm install express"
-3. Dodac go do naszego projektu poprzez "const express = require('express')"
-4. Powiedziec ze inicjujemy apke expressowa poprzez "const app = express()"
-5. Jesli bedziemy wysylac do expressa jakies dane to musimy mu powiedziec jakiego typu to beda dane za pomoca: * app.use(express.urlencoded({ extended: false })) albo app.use(express.json());
-6. Mozemy przejsc do pisania naszych handlerow dla GET, POST, PUT, DELETE. 
-7. Jak juz mamy napisane handlery to musimy mu powiedziec zeby sluchal poprzez "app.listen(numer portu, () => {console.log('Example app listening on port 3000!');})"
-8. jesli chcemy to mozemy wprowadzic funkcje middleware ktore bedziemy stosowac miedzy requestami i mozemy je tez stosowac w wybranych metodach komunikacji z API
