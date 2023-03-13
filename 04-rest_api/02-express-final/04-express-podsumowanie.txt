@@ -1,0 +1,110 @@
+1. Tworzymy apke express jak w notatka z 03-express-podsumowanie
+
+2. Kazda apka expressowa ma persystencje. Czyli zachowuje dane po wylaczeniu, tak aby uzytkownik mial te dane dostepne nawet po restarcie.
+
+3. Tworzymy folder "models" - modele czyli cos co definiuje jak beda wygladac obiekty/encje w naszej aplikacji.
+    
+    3.1. w folderze models, tworzymy plik user.js w ktorym bedziemy przechowywac definicje/model naszego usera i eksportujemy go: "module.exports = { User };"
+
+    3.2. importujemy biblioteke do walidacji joi: "const Joi = require('joi')"
+
+    3.3. Joi potrzebuje schematu do walidacji dlatego tworzymy "userSchema = Joi.object({})" wedlog dokumentacji.
+
+    3.4. eksportujemy userSchema
+
+    3.5. w kontrolerze importujemy userSchema
+
+4. dodajemy .gitignore z node_modules w srodku
+
+5. Tworzymy folder controllers - wprowadzimy sobie kontrolery. Wczesniej definiowalismy routy. Kontrolery to warstwa w aplikacji pomiedzy tym co przychodzi (nasze API) a logika biznesowa. W kontrolerach czesto trzyma sie tzw CRUDy. Czyli operacje typu create, read, update, delete
+    
+    5.1. definiujemy userStorage jako nasza baze danych. W przszlosci polaczymy ja z prawdziwa baza.
+
+    5.2. Utworzymy sobie kontroler dla userow z parametrami ktore potrzebujemy dla usera.
+    "const createUser = (name, age) => { };"
+    
+    5.3. W kontrolerze importujemy model usera. "const { User } = require("../models/users");"
+    
+    5.4. Tworzymy metode createUser ktora dostaje name i age i tworzy usera i dodaje go do userStorage
+
+    5.5. Tworzymy metode getAllUsers w ktorej po prostu zwracamy userStorage
+
+    5.6. Tworzymy metode gtUserById
+
+    5.7. eksportujemy metody: "module.exports = { metoda, metoda }" ktore importujemy w routes/users.js
+
+6. Tworzymy folder routes
+    6.1. Tworzymy glowny router routes.js dla wszystkich route
+        
+        6.1.1. Importujemy expressa: "const express = require("express")"
+        
+        6.1.2. tworzymy router: "const router = express.Router()"
+        
+        6.1.3. eksportujemy modul: "module.exports = {router}"
+
+    6.2. Tworzymy plik route users.js 
+        
+        6.2.1. Importujemy expressa: "const express = require("express")"
+
+        6.2.2. tworzymy router: "const router = express.Router()"
+
+        6.2.3. Piszemy router dla kazdej metody ktora bedziemy uzywac. W tym przykladzie users.js
+           
+            6.2.3.1. Importujemy kontroler dla usera. Pamietamy ze w route NIE TRZYMAMY LOGIKI W ROUTACH. "const { createUser } = require("../controllers/users");"
+           
+            6.2.3.2. W routach powinnismy tylko widziec to ze request przychodzi, co my z nim robimy i jakiej odpowiedzi udzielamy w zaleznosci od przypadku. 
+           
+            6.2.3.3. Logika co sie dzieje z tym requestem powinna byc trzyma na gdzie indziej.
+           
+            6.2.3.4. zakladamy ze dane przyszly w req.body: "const { name, age } = req.body"
+            
+            6.2.3.5. Tworzymy blok "try{} catch{}"
+
+            6.2.3.6. W try probujemy stworzyc sobie naszego usera: "const user = createUser(name, age)"
+
+            6.2.3.7. Zwracamy status 201 - Created i mozemy zwrocic jsona z danymi: "return res.status(201).json(user)"
+
+            6.2.3.8. Jesli cos poszlo nie tak to w catch mozemy zwrocic status 500 i wiadomosc: "return res.status(500).send("Something went wrong")"
+
+            6.2.3.8. Zrobimy walidacje czy dane ktore dostajemy z requesta w body sa poprawne. Do tego mozemy zrobic nasz wlasna logike z "if else" ale my uzyjemy nowej biblioteki ktora jest uzywana w apkach komercyjnych joi: "npm i joi" - biblioteka do walidacji, musimy napisac jedynie przyklad jak chcemy zeby dane wygladaly a reszte zrobi biblioteka. Najlepiej zrobic to w naszych modelach - user.js
+
+            6.2.3.9. Importujemy do routes/users.js stworzony userSchema w models/user.js ktory posluzy nam do walidacji. 
+
+            6.2.3.10. uzywamy Joi w metodzie post do walidacji req.body: "userSchema.validate(req.body)"
+
+            6.2.3.11. Joi zwraca albo dane jesli walidacja sie powiodla albo error jesli nie. Wykorzystamy to w troche cwany sposob i sprawdzimy czy zwraca error: "const { error } = userSchema.validate(req.body)"
+
+            6.2.3.12. jesli zwroci error to my zwrocimy status 400 - bad request i wyslemy ten error w odpowiedzi: "if (error) {
+                            res.status(400).send(error);
+                        }"
+
+            6.2.3.13. Mozemy to jeszcze ladniej obsluzyc. Jesli mamy error to Joi zwraca pare danych ktore mozemy uzyc. np message ktory znajduje sie w details: "res.status(400).send(error.details[0].message)"
+
+        6.2.4. Exportujemy router: "module.exports = { usersRouter: router }"
+
+        6.2.5. Importujemy router do glownego routes: "const { usersRouter } = require("./users.js")"
+
+        6.2.6. Nadajemy sciezke w glownym routes.js z przekierowaniem do metody usersRouter za pomoca middleware: "router.use("/", usersRouter)"
+
+        6.2.7. Importujemy glowny router do glownego pliku index.js: "const { routes } = require("./routes/routes.js")"
+
+        6.2.8. W glownym index.js za pomoca middleware mowimy ze chcemy uzyc glownego routera: "app.use(routes)" Zawsze przed musi byc deklaracja jak parsujemy dane, jakie dane czytamy: "app.use(express.json())"
+
+7. W glownym pliku index.js za pomoca middleware mowimy ze chcemy czytac dane json: "app.use(express.json())"
+
+8. W Postman dodajemy do headera:
+    key: Content-Type
+    value: application/json
+
+------------------
+Podsumowanie zajec
+
+podzielilismy aplikacje na 3 warstwy
+    
+1. Warstwa modelu - zdefiniowalismy z jakich encji bedziemy korzystac w aplikacji. W typ przypadku zdefiniowalismy jak bedzie wygladal user
+
+    1.2. Zdefiniowalismy walidacje tego usera z pomoca biblioteki Joi
+
+2. Utworzylismy sobie warstwe kontrolujaca cala nasza plikacje. Warstwe ktora laczy nasz interfejs z warstwa modelu i logiki.
+
+3. Utworzylismy routy W ktorych przechowywujemy juz tylko to co odpowiada za interackcje
