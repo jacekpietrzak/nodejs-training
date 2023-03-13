@@ -1,0 +1,51 @@
+1. REST to metodologia pisania aplikacji ktora polega na polaczeniu klient - serwer
+
+2. URI vs URL
+    2.1 URI to identyfikator konkretnego zasobu bez informacji poufnych.
+    2.2 URL to identyfikator konkretnego zasobu ktory mowi tez nam jak dostac do niego dostep. 
+
+3. Architektura REST
+    3.1 Klient-serwer - Sieć powinna składać się z klientów i serwerów. Serwer to komputer, który ma interesujące zasoby, a klient to komputer, który chce współpracować z zasobami przechowywanymi na serwerze.
+    3.2 Stateless - Brak stanu, Każde zapytanie analizowane jest jako oddzielne
+    3.3 Jeden interfejs - wspólny język między serwerami i klientami, niewazne w czym jest napisany.
+
+4. Podstawowe lub najczęstsze wykorzystanie metody HTTP
+    4.1 GET - prosi o widok zasobu
+    4.2 POST - tworzy nowy zasob zgodnie z wyslanym widokiem
+    4.3 PUT - zamienia zasob na obecny widok zapytania
+    4.4 DELETE - usuwa wskazany zasob
+    4.5 PATCH - wykorzystuje sie dla czesciowej zmiany zasobu
+
+5. Podstawowe Kody odpowiedzi
+    5.1 100-199 - informacyjne
+        100: continue
+
+    5.2 200-299 - zakonczone pomyslnie
+        200: OK
+        201: Created
+        202: Accepted
+        204: No Content
+
+    5.3 300-399 - Przekierowania
+        301: Moved Permanently
+        307: Temporary Redirect
+
+    5.4 400-499 - Bledy klientow
+        400: Bad request
+        401: Unauthorized
+        403: Forbidden
+        404: Not Found
+
+    5.5 500-599 - Bledy serwera
+        500: Internal Server Error
+        501: Not Implemented
+        502: Bad Gateway
+        503: Service Unavailable
+        504: Gateway Timeout
+
+6. CORS - Cross-Origin Resource Sharing - to mechanizm ktory sprawdza zrodlo zapytania. Jesli ten request przychodzi z jakiegos nieznanego zrodla, albo podejrzanego to zanim jeszcze pozwoli polaczyc sie z nasza aplikacja to go sprwadza. Jesli jest watpliwego pochodzenie to go odcina i zwraca Cross-Origin Issue. 
+    6.2 Abysmy mogli polaczyc sie z naszym backendem i nie dostawali tego bledu musimy zainstalowac biblioteke CORS. "npm install cors"
+    6.3 zaimportowac o glownego index.js ("const cors = require("cors"))
+    6.4 uzywamy middleware aby powiedziec ze chcemy uzywac CORS ("app.use(cors())")
+    6.5 uzycie CORS w ten sposob "app.use(cors())" powoduje ze kazdy request ktory do nas przychodzi bedzie wpuszczony. Musimy skonfigurowac CORSA we wlasciwy sposob aby nie wpuszczal czegokolwiek.
+    6.6 Dlaczego POSTMAN nie ma problemow z CORSem? Poniewaz oni nie wysylaja zapytan z naszej maszyny a uzywaja swojego serwera proxy ktory jest wpisany na liste certyfikowanych trusted serwerow. Z tego serwera proxy wysyla zapytanie do naszego serwera.

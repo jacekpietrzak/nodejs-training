@@ -3,6 +3,9 @@
 /** importujemy express */
 const express = require("express");
 
+/** importujemy morgana */
+const morgan = require("morgan");
+
 /** importujemy nasz glowny router */
 const { router } = require("./routes/routes.js");
 
@@ -17,6 +20,11 @@ app.use(express.json());
  * jesli plik jest wiekszy niz 10mb to odrzuc
  * jesli plik ma rozszerzenie .exe bo jakis troll chce nam wrzucic wirusa to odrzuc.
  */
+
+/** ustalamy morgana nasz logger jako middleware
+ * aby sie dowiedziec co znaczy dev idziemy do dokumentacji biblioteki
+ */
+app.use(morgan("dev"));
 
 /** mowimy aby express uzywal naszego glownego routera z routes.js.
  * Nasz router jest tez niczym innym jak funkcja middleware ktora przyjmuje zapytania i rozdziela na rozne routingi
