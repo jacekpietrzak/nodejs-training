@@ -1,0 +1,113 @@
+MongoDB
+
+Wystepuja 2 typy baz danych
+
+    1. Relacyjne - SQL - Structured Query Language
+        
+        1.1. Powstaje jeszcze duzo aplikacji w bazach danych typu SQL. To ze jest to starszy typ bazy danych nie swiadczy ze gorszy.
+       
+        1.2. Sql to baza danych bazujaca na tabelach
+        
+        1.3. W Sql struktura jest zawsze z gory narzucona. To oznacza ze powiedzmy stworzymy sobie tabele danych o uzytkowniku i wystartujemy i potem sobie przypomnimy ze chcielibysmy dodac jeszcze jakies pole to w tym momencie aby to zrobic musimy zrobic transfer bazy danych do nowej struktury gdyz nie ma opcji dodania nowych pul w juz istniejacej strukturze.
+
+    2. Nierelacyjne - NoSQL - No Structured Query Language
+       
+        2.1. Nowy typ baz danych ktory jest bardzeij elastyczny niz SQL. 
+       
+        2.2. Baza ktora jest jedna wielka kolekcja w kotrej przechowujemy dane w kolekcjach.
+       
+        2.3. Nie ma scisle narzuconej struktury
+       
+        2.4. Dobra praktyka jest aby one jakas strukture mialy ale zawsze mozemy cos do tej kolekcji dolozyc co nie ma okreslonej struktury.
+
+Jak Pracowac z mongoDB?
+
+    1. Jest bardzo fajna biblioteka typu ODM - Object Data Modeling
+    
+    2. Zamiast modelu klasy usera w naszym modelu stworzymy model dokumentu usera.
+    
+    3. Instalujemy mongoose: "npm install mongoose -S"
+    
+    4. Tworzymy polaczenie z nasza baza danych
+        
+        4.1. stworzymy folder startup w ktorym bedziemy trzymac wszystko co chcemy zeby sie uruchamialo gdy nasza aplikacja sie uruchomi.
+        
+        4.2. Dodamy plik odpowiedzialny za polaczenie z baza danych: database.js
+            
+            4.2.1. Importujemy mongoosa: "const mongoose = require("mongoose")"
+            
+            4.2.2. potrzebujemy znac nasz dbpath (dokladnie to samo co wklejalismy do compassa zeby sie polaczyc): "const dbpath = 'mongodb+srv://jp:<password>@contacts.k3phzgp.mongodb.net/?retryWrites=true&w=majority'" - to jest juz jakis secret, dane wrazliwe ktorych nie powinnismy commitowac do repo. Dlatego bedziemy korzystac ze zmiennych srodowiskowych.
+            
+            4.2.3. Globalny obiekt process.env jest to obiekt zawierajacy informacje o serwerze (srodowisku), na ktorym dziala kod. Tworzymy plik .env i instalujemy pakiet dotenv: 'npm install dotenv --save'
+
+                4.2.3.1. Mozemy z tego obiektu wyczytac duzo danych odnosnie urzadzenia (srodowiska) ktore sie laczy do naszego serwera.
+                'console.log("enviro:", process.env);'
+                'console.log("Operating system:", process.env.OS);'
+            
+            4.2.4. W pliku index.js importujemy dotenv podajac sciezke do .env: 'require("dotenv").config({ path: "../.env" });'
+
+            4.2.5. Tworzymy zmienna connectDataBase ktora bedzie uruchamiala asynchronicznie laczenie sie z mongo db:
+           ' const connectDataBase = async () => {
+                await mongoose
+                    .connect(DBPATH)
+                    .then(() => {
+                    console.log("Connected to mongo db");
+                    })
+                    .catch((error) => console.log("Error with connect to db", error));
+            };'
+            
+            4.2.5. Exportujemy modul: 'module.exports = { connectDataBase };'
+
+            4.2.6. Musimy to dolaczyc do naszego glownego index.js.: 'const {connectDataBase} = require("./startup/database.js")'
+
+    5. Tworzymy schemat naszego usera ktory jest zgodny z mongo db w pliku naszego modelu.
+        
+        5.1. Importujemy mongoosa do pliku models/user.js: 'const mongoose = require("mongoose");'
+
+        5.2. Usuwamy poprzedni model dla lokalnej bazy i tworzymy nowy model dla mongo db: 
+        'const userSchema = new Schema({
+            name: String,
+            age: String,
+        });'
+
+            5.2.1. Nie potrzebujemy w naszym modelu id gdyz mongodb tworzy je za nas.
+
+        5.3. Nastepnie tworzymy model wykorzystujacy schemat: 
+        'const User = mongoose.model("user", userSchema);'
+
+        5.4. Eksportujemy Usera: 'module.exports = { User, userValidationSchema };'
+
+        5.5. Importujemy Usera do naszego kontrolera: 'const { User } = require("../models/user.js");' W kontrolerze robimy refaktor gdyz juz nie potrzebujemy podawac id dla naszego usera wiec mozemy to usunac.
+
+        5.6. Przerabiamy rowniez nasze route. Usuwamy podawanie id.
+
+    6. Przerabiamy metody zapytan bazy danych aby dostosowac je do mongo db.
+    
+        6.1. Tworzenie usera jest teraz operacja asynchroniczna wiec musimy to tez obsluzyc w kontrolerze i route.
+            
+            6.1.1. Usuwamy pusha do tablicy bo pracujemy teraz z zewnetrzna baza danych.
+
+            6.1.2. Narazie mamy zainicjowane tworzenie usera i potrzebujemy jeszcze zapisac go w bazie do tego uzywamy metody.save(): 'user.save();'
+
+        6.2. Aktualizacja usera. Jest to funkcja asynchroniczna: 
+            'const updateUser = async (id, newUser) => {
+                const user = await User.findOneAndUpdate({ _id: id }, newUser);
+                return user;
+            };'
+
+        6.3. Usuwanie usera
+            'const deleteUser = async (id) => {
+                return User.findByIdAndRemove({ _id: id });
+            };'
+
+        6.4. Pobieranie wszystkich userow:
+            'const getAllUsers = async () => {
+                const users = await User.find();
+                return users;
+            };'
+
+        6.5. Pobieranie usera po id:
+            const getUserById = async (id) => {
+                const user = await User.findOne({ _id: id });
+                return user;
+            };

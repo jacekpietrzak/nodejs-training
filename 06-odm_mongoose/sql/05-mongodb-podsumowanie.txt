@@ -1,0 +1,9 @@
+SQL - Uzyjemy sequelize zamiast mongoose 
+
+1. startup/database.js:
+
+    1.1. instalujemy sequelize: 'npm i --save sequelize'
+
+    1.2. importujemy do database.js: 'const { sequelize } = require("Sequelize");'
+
+    1.3. tworzymy instancje: 'const sequelize = new Sequelize();'

@@ -9,7 +9,7 @@ Express kroki:
         2.2.2 "start:dev": "nodemon"
     2.3 instalujemy morgana. Bedziemy go uzywac do logowania: "npm i morgan"
 
-3. Dodac go do naszego projektu poprzez "const express = require('express')"
+3. Dodac express do naszego glownego index.js poprzez "const express = require('express')"
 
 4. Powiedziec ze inicjujemy apke expressowa poprzez "const app = express()"
 
