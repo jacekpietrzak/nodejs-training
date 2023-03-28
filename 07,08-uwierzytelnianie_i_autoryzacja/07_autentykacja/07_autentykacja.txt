@@ -1,0 +1,409 @@
+1. Autentykacja (auth) - sprawdzanie usera czy jest w bazie danych naszej aplikacji i weryfikowanie jego haslo. Jak juz sprawdzimy ze on tu moze byc to w 2 kolejnosci sprawdzamy jego uprawnienia czyli autoryzacje.
+
+2. Autoryzacja (authorisation) - sprawdzanie czy dany zalogowany uzytkownik ma dostep do danego zboru danych. 
+
+Praca z baza danych do ktorej mamy dostep tylko po autentykacji (auth) dzieli sie na 2 etapy:
+
+    1. Logowanie - Sprzawdzamy czy uzytkownik jest w bazie danych i weryfikujemy jego haslo. Podajemy login i haslo. Jesli to sie zgadza to otrzymujemy w odpowiedzi unikalny token ktory jest wazny przez caly okres zalogowania.
+
+    2. Sprawdzanie tokena - po zalogowaniu i otrzymaniu unikalnego tokena, kazde zepytanie do bazy danych jest traktowane jako STATELESS (nie przechowuje stanu). Kazde zapytanie jest traktowane jak nowe i zawsze idzie z tokenem i jest sprawdzane po stronie serwera czy token sie zgadza.
+
+1. Rejestracja
+
+Narazie nasz user mial imie i wiek. Teraz bedziemy potrzebowac wiecej informacji do autentykacji. Rozszerzymy troche nasz model o:
+
+    1. email - za pomoca emaila bedziemy go identyfikowac:
+
+    ------------
+    email:{
+        type: String,
+        required: true,
+        unique: true,
+    }
+    ------------
+
+        1.1. nie bedzie mial juz default ale dodajemy nowa rzecz 'unique: true' - ten mail musi byc unikalny aby nie moznabylo zalogowac uzytkownikow o tym samym mailu. Parametr po ktorym identyfikujemy urzytkownika musi byc unikalny.
+
+    2. password - mozemy w nim ustawic jakies podstawowe policy jak minimalna ilosc znakow,
+
+    ------------
+    password: {
+        type: String,
+        required: true,
+        min: 6,
+    }
+    ------------
+
+    3. Zmienilismy nasz model to musimy dostosowac nasza walidacje, kontrolery i na koncu routy. Zawsze refaktor wykonujemy w tej kolejnosci:
+
+    model -> controller -> route
+
+        3.1. Walidacja - dodajemy pola email i password:
+            ------------
+            const userValidationSchema = Joi.object({
+                email: Joi.string().email().required(),
+                age: Joi.number().required().integer().min(18).max(150),
+                password: Joi.string().required().min(6),
+            });
+            ------------
+
+        3.2. Kontroler - dodajemy email i password:
+            ------------
+            const createUser = async (email, age, password) => {
+                const newUser = new User({ email, age, password });
+                await newUser.save();
+                return newUser;
+            };
+            ------------
+
+        3.3. Route - dla tworzenia usera.
+            ------------
+            router.post("/", async (req, res) => {
+
+                // odpalamy walidacje
+                const { error } = userValidationSchema.validate(req.body);
+                if (error) {
+                    // jezeli mamy blad walidacji to powiadamiamy uzytkownika
+                    // res.status(400).send(error);
+                    res.status(400).send(error.details[0].message);
+                }
+
+                try {
+                    // mozemy dokonac destrukturyzacje bo nasze req.body jest zwalidowane
+                    // console.log("req.body:", req.body);
+                    const { email, age, password } = req.body;
+                    // tworzymy usera
+                    const user = await createUser(email, age, password);
+                    // console.log("user", user);
+                    // zwracamy nowo stworzonego usera
+                    return res.status(201).json(user);
+                } catch (err) {
+                    return res.status(500).send("Something went wrong");
+                }
+            });
+            ------------
+
+    4. Utworzylismy usera z haslem i na ten moment haslo przechowujemy doslownie czyli:
+
+        password: "haslo" - widac co to jest za haslo
+
+        tak nie moze byc. Haslo powinno byc przechowywane w stanie zahaszowanym. Czyli w taki sposob zeby to bylo niemozliwe do odczytania tego hasla bez posiadania jakiegos tajnego secreta. Do tego przyjdzie nam z pomoca biblioteka: bcrypt ktory haszuje hasla.
+            ------------
+            npm i bcrypt
+            ------------
+
+        bcrypt hashuje hasla a do zahashowania hasla najpierw trzeba wygenerowac tzw salt-a. Salt to unikalny secret przy pomocy ktorego hashujacym algorytmem bedzie nasze haslo hashowane.
+
+        4.1 W modelu Usera zbudujemy metode ktora bedzie hashowac haslo.
+            ------------
+            // Importujemy bcrypt
+            const bcrypt = require("bcrypt")
+
+            // budujemy metode hashPassword:
+            const hashPassword = (pass) => {
+
+                //generujemy salta (sekretny klucz dla algorytmu hashujacego)
+                const salt = bcrypt.genSaltSync(10)
+
+                // hashujemy przychodzace haslo
+                cons hashedPassword = bcrypt.hashSync(pass, salt)
+
+                // zwracamy
+                return hashedPassword
+            };
+            ------------
+
+            4.1.2 aby sprawdzic czy metoda dziala mozemy ja wylogowac:
+                ------------
+                console.log(hashPassword("testowehaslo123"))
+                ------------
+
+            4.1.3. jak juz wiemy ze ona dziala to mozemy jej uzyc w naszym kontrolerze.
+
+        4.2. exportujemy metode hashPassword
+
+        4.3. Uzyjemy teraz nasza metode w kontrolerze.
+
+            4.3.1. Importujemy metode hashowania do kontrolera
+                ------------
+                const { User, hashPassword } = require("../models/user.js");
+                ------------
+
+            4.3.2. Tworzymy zmienna hashedPassword w kontrolerze do tworzenia usera i dodajemy ja jako password w zmiennej newUser
+
+                ------------
+                const createUser = async (email, age, password) => {
+                    // haszujemy haslo
+                    const hashedPassword = hashPassword(password);
+
+                    // tworzymy usera z zahaszowanym haslem
+                    const newUser = new User({ email, age, password: hashedPassword });
+                    await newUser.save();
+                    return newUser;
+                };
+                ------------
+
+
+2. Autentykacja / Logowanie
+
+Mamy juz utowrzonego uzytkownika wraz z zahaszownym haslem ktory jest w bazie wiec przechodzimy do kolejnego kroku czyli Logowanie.
+Sprawdzamy haslo uzytkownika i jesli jest poprawne to wydajemy tokena.
+Dobra praktyka jest aby Logike rejestracji i loginu trzymac w osobnych routach: routes/regiser.js i routes/login.js 
+
+    1. Tworzymy plik w routes/ login.js
+
+        1.1. importujemy expressa: 
+            ------------
+            const express = require("express");
+            ------------
+
+        1.2. tworzymy router:
+            ------------
+            const router = express.Router();
+            ------------
+
+        1.3. eksportujemy:
+            ------------
+            module.exports = { loginRouter: router };
+            ------------
+
+        1.4. importujemy do glownego pliku routes.js:
+            ------------
+            const { loginRouter } = require("./login.js");
+            ------------
+
+        1.5. uzywamy go w glownym pliku routes.js:
+            ------------
+            router.use("/login", loginRouter);
+            ------------
+
+        1.6. Tworzymy nowa sciezke w pliku login.js do logowania:
+            ------------
+            router.post("/", async (req, res) => {
+                // sprawdzamy czy login i haslo sa poprawne
+
+            });
+            ------------
+
+        1.7. Nie trzymamy logiki w routach wiec tworzymy nowy folder auth i w nim plik loginHandler.js
+
+            1.7.1. aby sprawdzic haslo musimy je rozszyfrowac. Do tego potrzebujemy biblioteki bcrypt
+            ------------
+            const bcrypt = require("bcrypt")
+            ------------
+
+            1.7.2. piszemy w controllers/users nowa metode do pobierania usera by email.
+            ------------
+            const getUserByEmail = async (email) => {
+                const user = await User.findOne({ email: email });
+                return user;
+            };
+            ------------
+
+                1.7.2.2 eksportujemy metode i importujemy do loginHandler
+
+            1.7.3. piszemy metode loginHandler ktora bedzie przyjmowala jako parametry email i password:
+            ------------
+            const loginHandler = async (email, incomingPassword) => {
+                // pobieramy uzytkownika. Nie znamy id wiec musimy to zrobic by email.
+                const user = await getUserByEmail(email)
+
+                // jezeli nie ma uzytkownika to zwroc informacje ze go nie ma
+                if(!user){
+                    throw "User not found";
+                }
+                
+                // wziac haslo uzytkownika
+                const userPassword = user.password;
+
+                // porownac hasla, przychodzace (incomingPassword z parametrow) wyslane z API i uzytkownika zapisane w bazie danych
+                // bcrypt.compareSync zwraca true albo false
+                const result = bcrypt.compareSync(incomingPassword, userPassword);
+
+                // zwracamy wynik porownania
+                return result;
+            };
+            ------------
+
+            1.7.4. eksportujemy metode
+            ------------
+            module.exports = { loginHandler };
+            ------------
+
+            1.7.5. importujemy metode do route/login.js
+            ------------
+            const { loginHandler } = require("../auth/loginHandler.js");
+            ------------
+
+        1.8. uzupelniamy metode router.post w routes/login.js
+            ------------
+            router.post("/", async (req, res) => {
+                // walidujemy poprawnosc danych
+                const { email, password } = req.body;
+
+                // jesli brakuje jakiejs wartosci to zwracamy wiadomosc.
+                if (!email || password) {
+                    return res.status(400).json({ message: "email and password are required" });
+                }
+
+                // sprawdzamy czy login i haslo sa poprawne
+                try {
+                    const result = await loginHandler(email, password);
+                    if (result) {
+                    // tu powinnismy wyslac token
+                    return res.status(200).json({ message: "hello user" });
+                    } else {
+                    return res.status(401).json({ message: "Wrong user credentials" });
+                    }
+                } catch (err) {
+                    return res.status(404).send(err);
+                }
+            });
+            ------------
+
+        1.9. Dodajemy do metody wysylanie tokena do walidacji kazdego zapytania. Standardem do tokenow jest JSON Web Token (JWT) 
+
+            1.9.1. Do tego uzyjemy biblioteki jsonwebtoken:
+            ------------
+            npm install jsonwebtoken
+            ------------
+
+            1.9.2. Tworzymy nowy plik w folderze auth o nazwie issueToken.js
+
+            1.9.3. Nasz token podobnie jak haslo jest haszowane. Czyli znow bedziemy potrzebowac secreta (salt) ktory bedzie haszowal dane w tokenie. bcrypt jest na tyle cwany ze potrafi to robic dynamicznie. W przypadku JWT jest inaczej. Dobra praktyka jest aby tego secreta przechowywac w .env. Mozemy na ten moment wygenerowac sobie jwt secret za pomoca strony internetowej albo jakiegos generatora.
+
+                JWT_SECRET=
+
+            1.9.4. importujemy jwt do auth/issueToken:
+            ------------
+            const jwt = require("jsonwebtoken");
+            ------------
+
+            1.9.5. importujemy jwt secret ze zmiennych srodowiskowych
+            const jwtSecret = process.env.JWT_SECRET;
+
+            1.9.5. piszemy metode issueToken:
+            ------------
+            const issueToken = (user) => {
+                // ustalamy nasz payload (informacje ktore chcemy dodatkowo zawrzec w tokenie) te informacje beda jawne. Dobra praktyka jest aby zawierac tutaj tylko id.
+                const payload = {
+                    id: user._id
+                };
+
+                //tworzymy (podpisujemy) token uzywajac metody jwt
+                const token = jwt.sign(payload, jwtSecret, { expiresIn: "1h" });
+
+                // zwracamy token
+                return token;
+            };
+            ------------
+
+            1.9.6. exportujemy metode:
+            ------------
+            module.exports = {issueToken}
+            ------------
+
+            1.9.7. importujemy metode do /auth/loginHandler.js i podmieniamy zwrot wyniku ze zwracania resultatu na zwrot tokeny:
+                ------------
+                // zwracamy wynik porownania - jak juz mamy token to zwracamy token zamiast wynik porownania.
+                //   return result;
+
+                // zwracamy token
+                if (result) {
+                    return issueToken(user);
+                }
+                ------------
+
+            1.9.8. Zmieniamy route dla routes/login.js:
+                ------------
+                try {
+                    // logujemy uzytkownika
+                    const token = await loginHandler(email, password);
+
+                    // jezeli logowanie poprawne to wydaj token
+                    return res.status(200).json({ token: token });
+                    } catch (err) {
+                        return res.status(404).send(err);
+                }
+                ------------
+            
+    2. Weryfikacja wydanego tokena.
+
+        Zrobimy przyklad ze aby pobrac liste wszystkich uzytkownikow trzeba byc zalogowanym. Oczywiscie w prawdziwym swiecie nie ma raczej takiego przypadku. Predzej uzytkownik ma dostep do jakiejs innej bazy danych ale na potrzeby przykladu uzyjemy naszej listy uzytkownikow. Token pobieramy z naglowka gdyz zawsze jest wysylany w naglowku.
+
+        2.1. Chcemy aby liste uzytkownikow mogl pobrac tylko uzytkownik zalogowany. Uzytkownik zalogowany to taki ktory ma wydany token. Uzyjemy do tego middleware w metodzie router.get w pliku routes/users.js. 
+
+            2.1.1. Tworzymu plik auth.js w folderze auth.js i piszemy funkcje middleware auth ktora przyjmuje 3 argumenty req, res, next:
+                ------------
+                // tworzymy funkcje middleware do obslugi autoryzacji czy uzytkownik moze pobrac liste uzytkownikow
+
+                // importujemy biblioteke JWT
+                const jwt = require("jsonwebtoken");
+
+                // pobieramy secret z .env
+                const jwtSecret = process.env.JWT_SECRET;
+
+                // piszemy funkcje middleware
+                const auth = (req, res, next) => {
+                // pobieramy token z naglowka o kluczu authorization (nazwe nadalismy sami. Mozemy wpisac tutaj co chcemy byleby potem podac to samo w odczycie tokena)
+                const token = req.headers.authorization;
+
+                // jesli uzytkownik nie wyslal tokena to nie puszczamy dalej
+                if (!token) {
+                    return res.status(401).json({ message: "No token provided" });
+                }
+
+                // jesli token jest to go weryfikujemy
+                try {
+
+                    // my tylko sprawdzamy token. np uzytkownik zarejestrowal sie, zalogowal, dostal token i cos narozrabial. Admin usunal jego konto ale ten uzytkownik byl cwany i skopiowal sobie token. Dzieki temu tokenowi moze dalej wysylac zapytania do serwera poniewaz my nie weryfikujemy nic wiecej jak tylko token. Mamy ogromna dziure bezpieczenstwa w systemie. aby tego uniknac to po weryfikacji tokenu nalezy sprawdzic czy uzytkownik istenije w bazie.
+                    
+                    // token zawiera id uzytkownika ktory wysyla zapytanie. Mozna to sprawdzic na stronie jwt.io. Dlatego wyciagamy z niego id za pomoca destrukturyzacji.
+
+                    const decodedToken = await jwt.verify(token, jwtSecret);
+                    const { id } = decodedToken;
+
+                    // po weryfikacji tokenu sprawdzamy czy uzytkownik istnieje w bazie/systemie. Za pomoca kontrolera ktory mamy juz napisany sprawdzamy czy id z tokena zgadza sie z nasza baza danych. 
+
+                    const user = await getUserById(id);
+                        if (!user) {
+                            // jesli nie ma takiego uzytkownika w systemie to dajemy wiadomosc Access denied
+                            return res.status(403).json({ message: "Access denied" });
+                        }
+                    
+                    // jesli wszystko sie udalo to wolamy funkcje next() aby zapytanie poszlo dalej.
+                    next();
+                } catch (error) {
+                    // jesli pojdzie nie tak to odmawiamy dostepu
+                    return res.status(401).json({ message: "Access denied" });
+                }
+                };
+
+                //eksportujemy modul
+                module.exports = { auth }; 
+                ------------
+
+
+            2.1.2. Aby sprawdzic dodatkowo czy mamy danego usera w bazie danych Importujemy na poczatek pliku kontroler do sprawdzenia usera po id:
+                ------------
+                const {getUserById} = require('../controllers/users.js')
+                ------------
+
+
+        2.2. Importujemy middleware do routes/users.js. i uzywamy jej w route do pobierania uzytkownikow. Mozemy tego middleware uzyc w jakiejkolwiek rute chcemy miec autoryzacje. Wystarczy ze dorzucimy middleware do route. Middleware jest reuzywalny, w tym jego potega:
+            ------------
+            const { auth } = require("../auth/auth.js");
+            ------------
+
+        2.3. Wrzucamy middleware jako 2 argument do route do pobierania uzytkownikow: 
+            ------------
+            router.get("/", auth, async (req, res) => {reszta kodu})
+            ------------
+
+            dzieki temu zanim metoda .get przejdzie do wykonywania swojego kodu, przejdzie przez kod middleware. 
+
+        2.4. Sprawdzamy w Postman. Aby przejsc weryfikacje potrzebujemy token od zalogowanego uzytkownika i uzyc go w headers:
+            ------------
+            key: Content-Type, value: application/json
+            key: authorization, value: token
+            ------------

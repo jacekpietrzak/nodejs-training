@@ -1,0 +1,403 @@
+Strategia weryfikowania uzytkownika JWT
+-------------
+
+Strategie weryfikacji sa przydatne gdy pracujemy nad duzymi aplikacjami i potrzebujemy rozne strategie autentykacji i autoryzacji.
+Na przyklad mamy 20 roznych rol uzytkownikow i kazdego bedziemy weryfikowac w inny sposob. Czyli mamy np 20 roznych strategii. Aby sie w tym wszystkim nie pogubic to mozemy skorzystac z takiej biblioteki i zdefiniowac sobie rozne strategie do autoryzacji i autentykacji i potem w zaleznosci od przypadku uzywac tej strategii 
+
+Rozszerzymy aplikacje o pewne rzeczy i posprzatamy.
+
+1. Wprowadzamy nowa route register aby bylo jak nalezy. Do tej pory korzystalismy z create user do rejestracji.
+
+    1.1. Tworzymy routes/register.js
+
+    1.2. importujemy express:
+        const express = require("express")
+
+    1.3. tworzymy zmienna router:
+        const router = express.Router();
+
+    1.4. importujemy schema do walidacji nowego usera:
+        const { userValidationSchema } = require("../models/user");
+
+    1.5. importujemy kontroler do tworzenia usera:
+        const { createUser } = require("../controllers/users.js");
+
+    1.6. tworzymy route do rejestracji
+        // Tworzymy usera
+        router.post("/", async (req, res) => {
+        // nie trzymamy tutaj logiki
+
+        // odpalamy walidacje
+        const { error } = userValidationSchema.validate(req.body);
+
+        if (error) {
+            // jezeli mamy blad walidacji to powiadamiamy uzytkownika
+            res.status(400).send(error.details[0].message);
+        }
+
+        // sprawdzamy czy dany email nie istnieje juz w bazie
+
+        const newUser = getUserByEmail();
+        if (newUser) {
+            return res
+            .status(409)
+            .json({ message: "The email address already exists." });
+        }
+
+        try {
+            // mozemy dokonac destrukturyzacje bo nasze req.body jest zwalidowane
+            const { email, age, password } = req.body;
+            // tworzymy usera
+            const user = await createUser(email, age, password);
+            // zwracamy nowo stworzonego usera
+            return res.status(201).json(user);
+        } catch (err) {
+            return res.status(500).send("Something went wrong");
+        }
+        });
+
+    1.7. eksportujemy modul:
+        module.exports = { registerRouter: router };
+
+    1.8. importujemy do glownego routera routes/routes.js:
+        const { registerRouter } = require("./register.js");
+
+    1.9. uzywamy routy w glownym routes/routes.js:
+        router.use("/register", registerRouter);
+
+2. Wprowadzimy nowy model aby lepiej pokazac autoryzacje. Wprowadzimy book. Standardowy User bedzie mogl czytac ksiazki a Admin bedzie mogl czytac Userow.
+
+    2.1. Tworzymy model models/book.js
+
+        2.1.2. importujemy mongoose:
+            const mongoose = require("mongoose");
+
+        2.1.3. tworzymy schema mongoose:
+            const Schema = mongoose.Schema
+
+        2.1.4. Importujemy Joi:
+            const Joi = require("joi");
+
+        2.1.5. Definiujemy schemat obiektu:
+            const bookSchema = new Schema(
+                {
+                    title: {
+                    type: String,
+                    required: true,
+                    },
+                },
+                {
+                    versionKey: false,
+                    timestamps: true,
+                }
+            );
+
+        2.1.6. ustalamy walidacje dla modelu przy pomocy Joi
+            const booksValidationSchema = Joi.object({
+                title: Joi.string().required(),
+            });
+
+        2.1.7. definiujemy model mongoose wykorzystujacy schemat
+            const Book = mongoose.model("Book", bookSchema);
+
+        2.1.8. Eksportujemy model i walidacje:
+            module.exports = { Book, bookValidationSchema };
+
+    2.2. Wprowadzamy kontrolery dla ksiazki.
+
+        2.2.1. tworzymy plik controllers/books.js
+
+        2.2.2. importujemy model ksiazki:
+            const { Book } = require("../models/book.js");
+
+        2.2.3. Tworzymy metode do tworzenia ksiazki:
+            const createBook = async (title) => {
+                // inicjujemy nowa ksiazke
+                const newBook = new Book({ title });
+
+                // zapisujemy ksiazke
+                await newBook.save();
+
+                // zwracamy ksiazke
+                return newBook;
+            };
+
+        2.2.4. Tworzymy metode do pobierania wszystkich ksiazek:
+            const getAllBooks = async () => {
+                const books = await Book.find();
+                return books;
+            };
+
+        2.2.5. Tworzymy metode do pobierania ksiazki po tytule:
+            const getBookByTitle = async (title) => {
+                const book = await Book.findOne(title);
+                return book;
+            };
+
+        2.2.6. Eksportujemy kontrolery:
+            module.exports = { createBook,getAllBooks, getBookByTitle };
+
+    2.3. Tworzymy route dla ksiazki:
+
+        2.3.1. tworzymy plik routes/books.js
+
+        2.3.2. Importujemy expresa:
+            const express = require("express");
+
+        2.3.3. importujemy kontrolery dla ksiazki:
+            const {
+                createBook,
+                getAllBooks,
+                getBookByTitle,
+            } = require("../controllers/books.js");
+
+        2.3.4. tworzymy zmienna router:
+            const router = express.Router();
+
+        2.3.5. tworzymy route dla getAllBooks
+            router.get("/", async (req, res) => {
+                try {
+                    const books = await getAllBooks();
+                    res.status(200).json(books);
+                } catch (error) {
+                    res.status(500).json({ message: "Something went wrong" });
+                }
+            });
+
+        2.3.6. tworzymy route dla getBookByTitle
+            router.get("/:title", async (req, res) => {
+                try {
+                    const { title } = req.params;
+                    const book = await getBookByTitle(title);
+                    if (!book) {
+                    return res.status(404).json({ message: "No book with this title" });
+                    }
+                    return res.status(200).json(book);
+                } catch (error) {
+                    return res.status(500).json({ message: "Something went wrong" });
+                }
+            });
+
+
+        2.3.7. tworzymy route dla createBook:
+    
+            2.3.7.1. importujemy schemat walidacji:
+                const { bookValidationSchema } = require("../models/book.js");
+
+            2.3.7.2. piszemy metode:
+                router.post("/", async (req, res) => {
+                    // walidujemy poprawnosc danych w body
+                    const { error } = bookValidationSchema.validate(req.body);
+
+                    if (error) {
+                        // jezeli mamy blad walidacji to powiadamiamy uzytkownika
+                        return res.status(400).json({ message: error.details[0].message });
+                    }
+
+                    try {
+                        // mozemy dokonac destrukturyzacje bo nasze req.body jest zwalidowane
+                        const { title } = req.body;
+                        // tworzymy ksiazke
+                        const newBook = createBook(title);
+                        // zwracamy nowo utworzona ksiazke
+                        return res.status(200).json(newBook);
+                    } catch (error) {
+                        return res.status(500).json({ message: "Something went wrong" });
+                    }
+                });
+            
+            2.3.8. Eksportujemy route:
+                module.exports = { booksRouter: router };
+
+            2.3.9. Importujemy route do glownego routera routes/routes.js:
+                const { booksRouter } = require("./books.js");
+
+            2.3.10. uzywamy route w glownym routerze routes/routes.js:
+                router.use("/books", booksRouter);
+
+3. Do tego czasu wszyscy uzytkownicy byli sobie rowni. Wprowadzimy sobie role uzytkownikow tak ze: 
+- do odczytywania i zapisywania ksiazek beda miec dostep admini i userzy.
+- do tworzenia, usuwania i zmieniania userow maja dostep tylko admini.
+Admin to tez uzytkownik wiec nie tworzymy nowego modelu tylko dodajemy role. Przy akcji bedziemy sprawdzac czy ten user jest adminem czy nie i w zaleznosci od tego bedzie mial pewnie uprawnienia.
+
+    3.1. Dodajemy do modelu usera role models/user.js:
+         role: {
+            type: String,
+        },
+
+    3.2. Dodajemy do walidacji Joi wpis o roli: 
+        role: Joi.string(),
+
+    3.3. Aktualizujemy nasz kontroler usera dodajac do parametrow role:
+        const createUser = async (email, age, password, role) => {
+            const hashedPassword = hashPassword(password);
+            const newUser = new User({ email, age, password: hashedPassword, role });
+            await newUser.save();
+            return newUser;
+        };
+
+    3.4. Aktualizujemy nasza route register dodajac role:
+        router.post("/", async (req, res) => {
+            const { error } = userValidationSchema.validate(req.body);
+
+            if (error) {
+                return res.status(400).json({ message: error.details[0].message });
+            }
+
+            const newUser = getUserByEmail();
+            if (newUser) {
+                return res
+                .status(409)
+                .json({ message: "The email address already exists." });
+            }
+
+            try {
+                const { email, age, password, role } = req.body;
+                const user = await createUser(email, age, password, role);
+                return res.status(201).json(user);
+            } catch (error) {
+                return res.status(500).json({ message: "Something went wrong" });
+            }
+        });
+
+    3.5. Aktualizujemy nasz plik auth/auth.js tak bysmy mieli w nim tez zawarte sprawdzenie roli uzytkownikow.
+
+        3.5.1. zrobimy tymczasowa tablice allowed roles:
+            const allowedRoles = ["admin"]
+
+        3.5.2. sprawdzamy role uzytkownika:
+            const { role } = user
+
+        3.5.3. sprawdzamy czy rola jest w tablicy allowed roles:
+            const isAllowed = allowedRoles.includes(role)
+
+        3.5.4. W ten sposob mozna to zrobic ale jestesmy ograniczeni bo gdybysmy chceli zrobic wiecej typow uzytkownikow to musielibysmy napisac duzo kopii tego samego auth dla kazdego typu uzytkownika. Zamiast tego zrobimy to dynamicznie:
+
+            3.5.4.1. Owiniemy nasza metode funkcja ktora bedzie przydzielac dynamicznie uzytkownika: 
+
+            const auth = (...allowedRoles) => {
+                // piszemy funkcje middleware
+                return async (req, res, next) => {reszta kodu}}
+
+            - ...allowedRoles przyjmuje zmienne z ktorych potem otrzymujemy tablice ale dynamicznie. Zmienne przyjmuje w route przy wywolaniu middleware np:
+
+            router.get("/", auth("admin", "user"), async (req, res) => {reszta kodu})
+
+            - w ten sposob mozemy uzyc jednej funkcji w wielu miejsca nadajac dynamicznie pozwolenia dostepu. Nadajmy teraz pozwolenia na dostep do innych route.
+
+            3.5.4.2. aktualizujemy auth:
+                const auth = (...allowedRoles) => {
+                    // piszemy funkcje middleware
+                    return async (req, res, next) => {
+                        // pobieramy token z naglowka
+                        const token = req.headers.authorization;
+
+                        console.log("allowed roles: ", allowedRoles);
+
+                        // jesli uzytkownik nie wyslal tokena to nie puszczamy dalej
+                        if (!token) {
+                        return res.status(401).json({ message: "No token provided" });
+                        }
+
+                        // jesli token jest to go weryfikujemy
+                        try {
+                            // my tylko sprawdzamy token. np uzytkownik zarejestrowal sie, zalogowal, dostal token i cos narozrabial. Admin usunal jego konto ale ten uzytkownik byl cwany i skopiowal sobie token. Dzieki temu tokenowi moze dalej wysylac zapytania do serwera poniewaz my nie weryfikujemy nic wiecej jak tylko token. Mamy ogromna dziure bezpieczenstwa w systemie. aby tego uniknac to po weryfikacji tokenu nalezy sprawdzic czy uzytkownik istenije w bazie.
+
+                            const decodedToken = await jwt.verify(token, jwtSecret);
+                            const { id } = decodedToken;
+
+                            // po weryfikacji tokenu sprawdzamy czy uzytkownik istnieje w bazie/systemie.
+
+                            const user = await getUserById(id);
+
+                            // sprawdzamy role uzytkownika
+                            const { role } = user;
+                            console.log("role", role);
+
+                            // sprawdzamy czy rola jest w tablicy allowed roles
+                            const isAllowed = allowedRoles.includes(role);
+                            console.log("isAllowed:", isAllowed);
+
+                            // sprawdzamy czy user istnieje
+                            if (user) {
+                                // sprawdzamy czy user ma dostep do danego zasobu
+                                if (isAllowed) {
+                                    // jesli wszystko ok to puszczamy dalej
+                                    next();
+                                } else {
+                                    // w momencie gdy user istnieje ale nie ma dostepu do zasobu to 403
+                                    return res
+                                        .status(403)
+                                        .json({ message: "You don't have permission to this resource" });
+                                }
+                            } else {
+                                // w momencie gdy user nie istneije w systemie to 401
+                                return res.status(401).json({ message: "Access denied" });
+                            }
+                        } catch (error) {
+                            console.log("error", error);
+                            // jesli pojdzie nie tak to odmawiamy dostepu
+                            return res.status(error.code).json({ message: "Access denied" });
+                        }
+                    };
+                };
+
+
+        3.5.5. Dobra praktyka gdy projekt nam rosnie jest uzywanie stalych a nie wpisywanie stringow gdyz mozemy sie pomylic.
+
+            3.5.5.1. Stworzymy plik config.js w glownym folderze
+
+            3.5.5.2. ww config.js podstawimy pod zmienne jakie mamy role w systemie:
+                const roles = {
+                    admin: "admin",
+                    user: "user",
+                    all: [admin, user],
+                };
+
+            3.5.5.3. eksportujemy modul:
+                module.exports = { roles };
+
+            3.5.5.4. importujemy nasz config do route w ktorej bedziemy uzywac auth:
+                const { roles } = require("../config.js");
+
+            3.5.5.5. destrukturyzujemy roles dla ladniejszego zapisu:
+                const {admin, user} = roles
+
+            3.5.5.6. uzywamy wybranych rul w middleware:
+                router.get("/", auth(admin, user), async (req, res) => {reszta kodu})
+
+
+    3.6. Zabezpieczamy nasz endpoint od ksiazek dodajac middleware auth do routy
+
+        3.6.1. importujemy auth:
+            const { auth } = require("../auth/auth.js");
+
+        3.6.2. Dodajemy auth do naszej route:
+            router.get("/", auth, async (req, res) => {reszta kodu})
+
+    
+Podsumowanie
+
+1. Stworzylismy endpoint register aby nasz uzytkownik mogl powstac. 
+    1.1. Rejestrujemy uzytkownika i przypisujemy mu role. 
+    1.2. Uzytkownik podaje email i haslo. 
+    1.3. Haslo haszujemy za pomoca biblioteki bcrypt. 
+    1.4. Uzytkownik powstal w naszej bazie danych. 
+
+2. Stworzylismy endpoint login. Uzytkownik loguje sie do systemu uzywajac swojego emaila i hasla.
+    2.0. Sprawdzamy tego uzytkownika za pomoca metody auth ktora napisalismy i podpielismy po endpoint jako middleware.
+    2.1. Sprawdzamy czy ten ktos jest w bazie danych szukajac danego emaila w bazie danych. Jezeli nie ma to mowimy ze zle dane logowania.
+    2.2. Przy pomocy biblioteki bcrypt dokonujemy walidacji hasla.
+    2.3. Jesli haslo jest prawidlowe to wydajemy JWT token hashowany 256 bitowym algorytmem
+3. Uzytkownik do kazdego zapytania bedzie musial zalaczyc ten token w headerze zapytania.
+    3.1. Ten token pozwala nam tego usera zidentyfikowac poniewaz my w payload zawarlismy jego id.
+    3.2. Za kazdym razem ten user wysle jakis request do systemu to my sprawdzimy go
+        3.2.1. czy ten token jest poprawny za pomoca biblioteki jwt metoda verify
+        3.2.2. jesli token sie zgadza to wyciagamy id tego usera z tokenu i sprawdzamy czy ten user istnieje.
+        3.2.3. jesli istnieje to puszczamy dalej, jesli nie istnieje to dajemy wiadomosc access denied
+        3.2.4. Sprawdzamy role uzytkownika w systemie ktora jest zapisana w bazie danych w kluczu tego usera.
+        3.2.5. Jesli jego rola pozwala mu na dostep do zasobu to puszczamy dalej za pomoca next(), jesli nie to dajemy wiadomosc ze brak dostepu do tego zasobu.
+4. Zabezpieczamy tym auth poszczegolne endpointy naszego restowego api mowiac kto ma do niego dostep.
+    4.1. do ksiazek pozwolilismy wszystkim. 
+    4.2. do userow pozwolilismy adminom.
+    4.3. do register nie dolaczylismy auth ponieaz kazdy ma miec mozliwosc rejestracji.
