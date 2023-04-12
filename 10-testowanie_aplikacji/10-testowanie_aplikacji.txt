@@ -1,0 +1,130 @@
+Testowanie aplikacji
+
+1. Testowanie polega na sprawdzaniu stworzonych wczesniej przez product ownera, poszczegolnych historii/funkcjonalnosci korzystania z aplikacji przez end usera. Np user chce odczytac liste ksiazek -> historia wyglada tak: User sie rejestruje -> user sie loguje -> user pobiera liste ksiazek. W przypadku gdy mamy zawila sciezke jakiejs akcji np w poprzednich przykladach aby uzytkownik mogl stworzyc kontakt musialbyc zarejestrowany, zalogowany i dopiero uzyc tworzena kontaktu. W takim przypadku musielismy w postmanie przetestowac kazda sciezke osobno. Testowanie automatyczne aplikacji daje nam to ze mozemy ustawic pewne historie ktore beda nam te sciezki testowaly same. 
+
+2. Kod pisany metoda TDD Test Driven Development - najpierw piszemy test a potem na podstawie testu piszemy kod. Najbezpieczniejszy sposob programowania. Zmiany z wieksza pewnoscia ze sie nic nie wykrzaczy. Kod lepiej przemyslany.
+
+3. Piramida testowania
+    1. End to end - UI test - Testy finalne ktorymi testuje sie wszystkie warstwy aplikacji. Klikanie wszystkich sciezek mozliwych w naszej aplikacji z poziomu frontendu. Czasochlonne zeby napisac, wymagaja mocy obliczeniowej, drogie w zmianach (jesli zmienimy jakas funkcjonalnosc a ta funkcjonalnosc wystepuje w 20 sciezkach testowych to kazda musimy zmienic). Przykladowe biblioteki:
+        1.1. Cypress
+    2. Integration - integracja z api. Wychodzimy poza nasza aplikacje i laczymy sie ze zintegrowanymi serwisami np bazami danych, api. Testujemy cos co nie jest juz w obrebie naszego kodu.
+    3. Unit test - testowanie metod, klas, funkcji - Bardzo czesto wlaczane, pracuja szybko, duza ilosc w aplikacji
+
+4. najbardziej popularna biblioteka to Jest
+
+5. Napiszemy sobie prosta funkcje. Ale zeby zrobic to poprawnie to powinismy napisac w TDD. TDD polega na tym ze najpierw piszemy test ktory rozwala nasza funkcje a potem zaczynamy pisac kod ktory zapobiega bledom.
+    5.1. Tworzymy plik 
+        index.test.js
+        5.1.1. piszemy funkcje w wersji basic
+            const sum = (a, b) => {
+                return a + b;
+            };
+
+            // eksportujemy funkcje
+            module.exports = sum
+
+    5.2. Pomyslmy jak mozemy ta funkcje wywolac zeby ja zepsuc np:
+        // check if we didnt pass array
+        // check if we dont try to pass wrong types
+        // check if we passed both arguments
+    
+    5.3. Piszemy test do naszej funkcji korzystajac z biublioteki jest
+        // importujemy funkcje ktora chcemy testowac
+        const sum = require("./index.js");
+
+        describe("Testing sum function", () => {
+                // check if we didnt pass array
+            it("should return error when array is provided", () => {
+                // wywolujemy nasza funkcje i podajemy tablice jako pierwszy argument. Uzywamy expect do przekazania co powinno zwrocic.
+                expect(sum([1, 2, 3, 4], 223231)).toThrowError();
+            });
+        });
+
+    5.4. aby odpalic test dodajemy do package.json script:
+        "test": "jest"
+
+        mozemy tez dodac flage watch to Jest bedzie caly czas nasluchiwal:
+            "test": "jest --watch"
+
+        Jest wylapuje wszystkie pliki z rozszezeniem .test.js i automatycznie te testy odpali.
+    
+    5.5. Test pokazuje nam blad (swieci sie na czerwono) wiec teraz mozemy rozszerzyc funkcje ktora testujemy o zabezpieczenie aby tego bledu nie bylo. Dodajemy ifa w momencie gdy argumentem jest tablica to dajemy error i zwracamy false:
+        const sum = (a, b) => {
+            if (Array.isArray(a) || Array.isArray(b)) {
+                console.error("Array provided as argument");
+                return false;
+            }
+
+            return a + b;
+        };
+
+        module.exports = sum;
+
+    5.6. Po dodaniu ifa test juz swieci sie na zielono.
+
+    5.7. dopiszemy kolejny test dla // check if we dont try to pass wrong types
+        describe("Testing sum function", () => {
+            ... reszta kodu
+
+            // check if we dont try to pass wrong types
+            it("should return false if argument type different than number", () => {
+                expect(sum("123", 123)).toBe(false);
+            });
+        });
+
+    5.8. znow odpalamy jest i widzimy ze jeden test swieci sie na czerwono. Rozbudowujemy nasza funkcje o kolejne zabezpieczenie.
+        const sum = (a, b) => {
+            ... reszta kodu
+
+            if (typeof a === "string" || typeof b === "string") {
+                console.error("String provided as argument");
+                return false;
+            }
+
+            return a + b;
+        };
+  
+    5.9. Piszemy kolejny test dla // check if we passed both arguments
+        it("should return false if we didnt pass any argument", () => {
+            expect(sum(5)).toBe(false);
+        });
+
+    5.10.  znow odpalamy jest i widzimy ze jeden test swieci sie na czerwono. Rozbudowujemy nasza funkcje o kolejne zabezpieczenie. W tym momencie jednak musimy pomyslec gdzie napisac to zabezpieczenie gdyz ta opcja sprawdza czy podalismy wszystkie argumenty. To oznacza ze najlepiej sprawdzic to na poczatku. Czyli zabezpieczenie piszemy na starcie.
+        if (!a || !b) {
+            console.error("Both arguments need to be provided");
+            return false;
+        }
+
+    5.11. Jak dodalismy tego ifa to testy zrobily sie zielone.
+
+    5.12. Aby bylo poprawnie to powinnismy troche inaczej napisac i test i sprawdzanie. Jesli chcemy sprawdzic co zwraca czyli return to w tescie expect nie musimy wywolywac funkcji ale jesli chcemy sprawdzic czt wywali nam blad czyli throw to juz musimy wywolac funkcje:
+        5.12.1. Test:
+            // check if we passed both arguments
+            it("should return false if we didnt pass any argument", () => {
+                expect(() => sum(5)).toThrowError(); // wywolujemy funkcje aby zwrocic error
+            });
+        
+        5.12.2. sprawdzanie:
+            if (!a || !b) {
+            throw "Both arguments need to be provided";
+        }
+
+6. Matchery to funkcje ktore nam pozwalaja na sprawdzanie aplikacji. Jest ich wiele. Mozna sprawdzic co mamy w dokumentacji.
+
+7. Ogolnie najpierw piszemy test a potem refaktorujemy ta podstawowa funkcje aby test sie spelnil.
+
+8. Na samym poczatku powinnismy napisac test ktory sprawdza czy cos ogolnie zwracamy.
+    it("schould return sum", () => {
+        expect(sum(5, 5)).toBeDefined();
+    });
+
+9. dzieki temu ze napisalismy test, gdy przyjdzie jakas zmiana to wiemy ze mozemy byc spokojni bo jesli cos bedzie nie tak z kodem to dostaniemy o tym informacje.
+
+10. Aby napisac testy integracji bedziemy korzystac z poprzedniego projektu 09. Stworzymy test tworzenia usera. 
+    10.1. Do testow bazy danych powinno sie stworzyc osobna baze danych. Dlaczego? Poniewaz nie chcemy zepsuc aktualnej bazy danych. Podczas testow bedzie ta baze czyscic przed kazdym testem. 
+    10.2. Potrzebujemy zrobic szybka konfiguracje 
+
+10. jesli chcemy aby jakis test nie byl wykonywany to go nie komentujemy a dodajemy przed nim x:
+    xit("schould reduce sum by 5 if sum is less than 10", () => {
+        expect(sum(4, 4)).toBe(3);
+    });

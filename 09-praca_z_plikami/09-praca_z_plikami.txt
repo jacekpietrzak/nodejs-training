@@ -1,0 +1,213 @@
+Dodawanie plikow
+
+Aby obsluzyc pliki w node js mozemy wykorzystac biblioteke Multer ktora wykona wszystko za nas. Multer to middleware ktory posiada metody do zarzadzania plikami. Instalujemy go po to aby Multer obsluzyl plik w momencie wyslania go do naszej aplikacji.  
+
+1. Instalujemy biblioteke do obslugi plikow multer:
+    npm install multer
+
+2. tworzymy index.js w glownym folderze.
+
+    2.1. Importujemy expressa
+        const express = require("express")
+
+    2.2. uzyjemy bibliotek do zapisu i odczytu ktore uzywalismy na poczatku modulu node.js
+
+        2.2.1. importujemy modul "path" ktory pozwala nam na obsluge sciezek plikow. Modul ktory jest juz w node.js
+            const path = require("path")
+
+        2.2.2. importujemy modul file system wersje synchroniczna do obslugi plikow
+            const fs = require("fs").promises
+
+    2.3. importujemy Multera
+        const multer = require("multer")
+
+    2.4. Inicjalizujemy aplikacje express
+        const app = express()
+
+    2.5. Napiszemy przykladowego endpointa i zobaczymy co przychodzi.
+        app.post("/upload", (req, res) => {
+            console.log(req.body);
+            return res.status(200).send("hello");
+        });
+
+    2.6. nasza aplikacja zeby dzialac musi tez sluchac
+        app.listen()
+
+3. Sprobujemy za pomoca postmana wyslac jakis plik i zobaczymy co sie stanie 
+
+    3.0. wybieramy metode post 
+
+    3.1. Do tej pory wybieralismy body -> raw ale zeby przeslac plik musimy wybrac form-data
+
+    3.2. w form data -> key wybieramy zamiast text -> file i wpisujemy np picture
+
+    3.3. w value pokaze sie przycisk do wyboru pliku. Wybieramy jakis plik graficzny.  
+
+    3.4. bo wyslaniu zapytania dostaniemy status 200 i wiadomosc hello ale consol.log zwroci nam undefined. To dlatego ze nie uzylismy jeszcze multera. By default javascript nie wie czym jest to co wyslalismy wiec potrzebuje czegos aby to obsluzyc.
+
+4. Obslugujemy obrazek przy pomocy multera
+
+    4.1. definiujemy miejsce przechwania plikow - pierwsze co maszyna (lokalna czy serwer) musi wiedziec to gdzie dany plik ma trafic. Musi go gdzeis przechowac - folder - musimy podac wartosc bezwzgledna, pelna sciezke. 
+        const storeImage = path.join(process.cwd(), "images")
+        // inicjalizujemy pelna sciezke przechowania pliku (cwd - curretn working directory), metoda join laczy sciezki cwd i dodatkowa nadana folderu images
+
+    4.2. inicjalizujemy storage korzystajac z multera
+        const storage = multer.diskStorage({
+            destination: (req, file, cb) => {
+                // multer to middleware
+                cb(null, storeImage); // podajemy sciezke gdzie ten storage chcemy umiescic (cb - callback - mozna powiedziec ze odpowiednik next)
+            },
+            filename: (req, file, cb) => {
+                cb(null, file.originalname); // podajemy jaka ma byc nazwa pliku. W tym wypadku oryginalna nazwa.
+            },
+            limits: {
+                // definiujemy limity aby ktos nam nie zapchal serwera.
+                fileSize: 1048576, // wielkosc pliku w bajtach - tutaj 1mb
+            },
+        });
+
+    4.3. piszemy funkcje middleware do obslugi uploadu
+        const upload = multer({ storage: storage }); // podajemy jako argument storage ktory stworzylismy
+
+    4.4. dodajemy nasze middleware do route
+
+    4.5. W tym momencie dostaniemy blad ze nie ma takiego folderu. Mozemy go stworzyc recznie ale jakbysmy mieli trzymac aplikacje na jakis zewnetrznych serwerach typu AWS, Azure to bedziemy miec problem zeby zrobic to recznie. Musimy dac aplikacji mozliwosc zrobienia tego za nas.
+
+        4.5.1 stworzymy osobny plik helpers.js w glownym folderze
+
+        4.5.2. Napiszemy 2 metode. Czy folder istnieje, jesli nie istnieje to go tworzymy. 
+            // importujemy filesystem
+            const fs = require("fs").promises;
+
+            // Sprawdzamy czy folder istnieje
+            const isExist = (path) => {
+                // fs daje metode access czyli wejdz, sprawdz
+                return (
+                    fs
+                    .access(path)
+                    // jesli istnieje to zwroc true
+                    .then(() => true)
+                    // jesli nie istnieje to zwroc false
+                    .catch(() => false)
+                );
+            };
+
+            // jesli folder nie istnieje to go tworzymy
+            const createFolderIfNotExist = async (path) => {
+                if (!(await isExist(path))) {
+                    await fs.mkdir(path);
+                }
+            };
+
+            module.exports = {
+            createFolderIfNotExist,
+            };
+
+        4.5.3. Importujemy ta metode do glownego pliku
+            const createFolderIfNotExist = require("./helpers.js");
+
+        4.5.4. Mozemy wywolac te metode w 2 miejscach
+            4.5.4.1. w momencie kiedy aplikacja dostanie request. W route:
+                app.post("/upload", upload.single("picture"), (req, res) => {
+                    createFolderIfNotExist(storeImagePath);
+                    return res.status(200).send("hello");
+                }); 
+
+            4.5.4.2. albo gdy uruchamiamy serwer:
+                app.listen(3000, () => {
+                    createFolderIfNotExist(storeImagePath);
+                    console.log(`App is listening on port 3000`);
+                });
+
+5. Aktualizujemy nasze /upload route 
+    5.1. dodajemy next do parametrow i zmieniamy na metode asynchroniczna.
+        app.post("/upload", upload.single("picture"), async (req, res, next) => {
+            // wyciagamy dane na temat przychodzacego pliku
+            const { path: temporaryName, originalName } = req.file;
+
+            // okreslamy sciezke i tymczasowa nazwe pliku. Nazwa pliku jest taka sama jak nazwa pliku przychodzacego
+            const fileName = path.join(storeImagePath, originalName);
+
+            // jak ten plik juz istnieje to mozemy zmienic jego nazwe na docelowa. Robimy try catch poniewaz jesli sie cos pojdzie nie tak to znaczy ze cos sie wykrzaczylo z uploadem pliku i hcemy do obsluzyc.
+
+            try {
+                await fs.rename(temporaryName, fileName);
+            } catch (error) {
+                // jesli sie nie udalo to wywal ten plik tymczasowy
+                await fs.unlink(temporaryName);
+                // pusc dalej ale jako argument przekaz error
+                return next(error);
+            }
+
+            return res.status(200).send("file upload success");
+        });
+    
+    5.2 teraz obsluzymy blad dzieki nawtywnej bibliotece nodejs: http-errors 
+        5.2.1. importujemy biblioteke   
+            const createError = require("http-errors")
+
+        5.2.2. piszemy middleware do obslugi bledow:
+            app.use((req, res, next) => {
+                next(createError(404));
+            });
+
+            // jesli pojawi sie argument err to dajemy ten middleware
+            app.use((err, req, res, next) => {
+                //jesli ma okreslony status to niech da status a jesli nie to niech da 500
+                res.status(err.status || 500);
+
+                // json ktory wyslemy do uzytkownika
+                res.json({ errorMessage: err.message, status: err.status });
+            });
+
+6. Obsluga obrazkow w prawdziwym swiecie wyglada nastepujaco. Gdy wgrywamy plik na serwer plik nie zapisuje sie w bazie danych tylko uploaduje na serwer w chmurze i jego adres zapisujemy w bazie danych. Do przykladu uzyjemy nasz model ksiazki z poprzednich zajec. Rozszerzymy go o okladke.
+    6.1. dodamy do naszego modelu informacje o cover images
+        coverImageUrl: {
+            type: String,
+        },
+        nie bedziemy walidowac joi-em poniewaz gdy wysylane jest POST do tworzenia ksiazki to nie mamy pojecia gdzie bedzie przechowywna okladka ksiazki. To jest postronie serwera. To dopiero bedzie zwrocone po utworzeniu tej ksiazki.
+    6.2. zaimportujemy wszystkie potrzebne pliki z poprzedniego zadania do obslugi tworzenia ksiazki
+    6.3. importujemy metoda createBook
+        const {createBook} = require("./controllers/books.js")
+    6.4. zrefaktorujemy nasza metode do tworzenia ksiazki dodajac do parametrow oprocz title, coverImageUrl       
+        const createBook = async (title, coverImageUrl) => {
+            // inicjujemy nowa ksiazke
+            const newBook = new Book({ title, coverImageUrl });
+
+            // zapisujemy ksiazke
+            await newBook.save();
+
+            // zwracamy ksiazke
+            return newBook;
+        };
+    6.5. Uzupelniamy nasze route dla upload:
+        app.post("/upload", upload.single("picture"), async (req, res, next) => {
+            // wyciagamy dane na temat przychodzacego pliku
+
+            const { path: temporaryName, originalname: originalName } = req.file;
+            const { title } = req.body;
+
+            // tworzymy sciezke absolutna do PLIKU docelowego z tymczasowa nazwa. Nazwa pliku jest taka sama jak nazwa pliku przychodzacego
+            const fileName = path.join(storeImagePath, originalName);
+
+            // jak ten plik juz istnieje to mozemy zmienic jego nazwe na docelowa. Robimy try catch poniewaz jesli sie cos pojdzie nie tak to znaczy ze cos sie wykrzaczylo z uploadem pliku i hcemy do obsluzyc.
+
+        try {
+            // podmieniamy nazwe tymczasowa na wlasciwa
+            await fs.rename(temporaryName, fileName);
+
+            // przyklad dodawania okladki ksiazki na podstawie poprzednich zajec
+            // wrzucamy nasz plik do cloud storage ===> otrzymujemy path
+
+            // zapisujemy sciezke do bazy danych
+            const book = await createBook(title, fileName);
+            console.log(book);
+        } catch (error) {
+            // jesli sie nie udalo to wywal ten plik tymczasowy i zwracamy error
+            await fs.unlink(temporaryName);
+            // pusc dalej ale jako argument przekaz error
+            return next(error);
+        }
+
+        return res.status(200).send("file upload success");
+    });
