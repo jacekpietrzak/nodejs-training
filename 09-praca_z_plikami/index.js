@@ -66,7 +66,7 @@ app.post("/upload", upload.single("picture"), async (req, res, next) => {
   // tworzymy sciezke absolutna do PLIKU docelowego z tymczasowa nazwa. Nazwa pliku jest taka sama jak nazwa pliku przychodzacego
   const fileName = path.join(storeImagePath, originalName);
 
-  // jak ten plik juz istnieje to mozemy zmienic jego nazwe na docelowa. Robimy try catch poniewaz jesli sie cos pojdzie nie tak to znaczy ze cos sie wykrzaczylo z uploadem pliku i hcemy do obsluzyc.
+  // jak ten plik juz istnieje to mozemy zmienic jego nazwe na docelowa. Robimy try catch poniewaz jesli cos pojdzie nie tak to znaczy ze cos sie wykrzaczylo z uploadem pliku i chcemy do obsluzyc.
 
   try {
     // podmieniamy nazwe tymczasowa na wlasciwa

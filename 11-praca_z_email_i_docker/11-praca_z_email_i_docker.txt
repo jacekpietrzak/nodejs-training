@@ -1,0 +1,322 @@
+## Nodemailer to paczka do wysylania maili ktora umozliwia polaczenie sie z roznymi dostawcami.
+
+1. instalujemy dotenv i nodemailer
+    npm i dotenv nodemailer
+    1.1. w package.json dodajemy linijke abysmy mogli korzystac z nowych es modules a nie common modules
+        "type": "module", 
+
+2. tworzymy plik .env
+
+3. tworzymy plik .gitignore, a w nim:
+    node_modules
+    .env 
+
+4. tworzymy plik sender.js
+    4.1. W tym pliku wkleimy skopiowany kod z dokumentacji nodemailera.
+    4.2. Zmienimy kod troche. Klikajac na poszczegolne pozycje z ctrl mozemy zobaczyc jakiego typu dane przyjmuje. Mozna wyczytac ze adresy mozemy dac w tablicy a dane uzytkownika w obiekcie. Lepiej czytelne i latwiej do obslugi z javascript
+        from: pozycje from zamienimy na obiekt {name: "imie", address: "email adres"},
+        to: pozycje to zamienimy na tablice adresow,
+        subject: dodamy aktualna date,
+        text: zostawimy jak jest
+        html: dodamy pare pol aby pokazac jak dzialaja. 
+            `
+            <h1 style='color: red'>Hello there 🚀<h1/> // stylowanie i emotka
+            <div>
+            <a href=${link}>You have won 1 million carrots! 🥕🥕🥕 Get it now!</a> //link
+            </div>
+            <img src=${imgUrl} alt='marchewka'/> // obrazek
+            <p>Lorem ipsum, dolor sit amet consectetur adipisicing elit. Tempore ex beatae totam dicta maiores labore quasi, nostrum illo nisi harum esse provident animi accusamus est, ullam, fuga soluta. Cumque, ipsum?</p>
+            `
+    4.3. nodemailer pozwala nam na stworzenie linku podgladowego jak nasz email bedzie wygladal.
+        const previewUrl = nodemailer.getTestMessageUrl(info);
+
+        4.3.1. jesli uruchomimy plik to dostaniemy w zwrocie link do podlgadu
+            npm sender.js
+
+    4.4. nodemailer pozwala nam tez stworzenie konta na ethemeral mailu
+        4.4.1. w pliku .env dodamy zmienne jak
+            EMAIL_USER=""
+            EMAIL_PWD=""
+        
+        4.4.2. wylogujemy sobie zmienna testAccount. W niej mamy zmienne odpowiedzialne za usera i haslo. Jesli wylogujemy sobie ta zmienna w nawiasach/wasach to przy logu dostaniemy nazwe tej zmiennej.
+
+        4.4.3. skopiujemy usera i haslo do pliku .env
+
+        4.4.4. w tym momencie test account zawsze tworzy nowego uzytkownika jesli uruchamiamy plik. Stworzymy sobie logike ktora pozwoli nam decydowac czy chcemy nowego czy chcemy uzyc starego uzytkownika.
+            4.4.4.1. Stwrozymy uzytkownika ktory bedzie bazowal na danych z .env. Aby to zrobic musimy stworzyc dotenc config.
+                import dotenv from "dotenv"
+                dotenv.config(); // jako ze ten plik jest w glownym folderze to nie musimy podawac sciezki
+            4.4.4.2. stworzymy zmienna etherealAuth z danymi z .env
+                const etherealAuth = {
+                    user: process.env.EMAIL_USER,
+                    user: process.env.EMAIL_PWD,
+                }
+        4.4.5. stworzymy funkcje ktora zwaliduje nam dane i jesli one sa to zwroci uzytkownika a jezeli nie ma danych to wygeneruje nam nowego : 
+            const getAuth = async () => {
+                const etherealAuth = {
+                    user: process.env.EMAIL_USER,
+                    pwd: process.env.EMAIL_PWD,
+                };
+                if (!etherealAuth.user || !etherealAuth.pwd) {
+                    const newUser = await nodemailer.createTestAccount();
+                    return console.log("no data. Generating new user:"), newUser;
+                } else {
+                    return console.log("user from .env:"), etherealAuth;
+                }
+            };
+
+            4.4.4.2. Wywolamy ja przed transporterem aby pobrac uzytkownika albo go wygenerowac:
+            const auth = await getAuth();
+
+        4.4.6. W funkcji transporter zmienimy wartosci dla auth.user i auth.pass:
+            // create reusable transporter object using the default SMTP transport
+            const transporter = nodemailer.createTransport({
+                host: "smtp.ethereal.email",
+                port: 587,
+                secure: false, // true for 465, false for other ports
+                auth: {
+                    user: auth.user, // generated ethereal user
+                    pass: auth.pass, // generated ethereal password
+                },
+            }); 
+
+        4.4.7. Refaktorujemy funkcje info:
+            // send mail with defined transport object
+                const info = await transporter.sendMail({
+                    from: { name: "Fred Foo", address: "foo@example.com" }, // sender address
+                    to: ["bar@example.coom", "baz@example.com"], // list of receivers
+                    subject: `Hello ${new Date().toISOString()}`, // Subject line
+                    text: "Hello there", // plain text body
+                    html: `
+                    <h1 style='color: red'>Hello there 🚀<h1/>
+                    <div>
+                    <a href=${link}>You have won 1 million carrots! 🥕🥕🥕 Get it now!</a>
+                    </div>
+                    <img src=${imgUrl} alt='marchewka'/>
+                    <p>Lorem ipsum, dolor sit amet consectetur adipisicing elit. Tempore ex beatae totam dicta maiores labore quasi, nostrum illo nisi harum esse provident animi accusamus est, ullam, fuga soluta. Cumque, ipsum?</p>
+                    `, // html body
+                });
+        
+    4.5. Aby sprawdzic jak email bedzie wygladal wywolujemy metode getTestMessageUrl:
+            const previewUrl = nodemailer.getTestMessageUrl(info);
+
+    4.6. Wyciagniemy template html dla maila z funkcji info dla czystosci kodu i latwosci czytania.
+            const templateHtml = `
+                <h1 style='color: red'>Hello there 🚀<h1/>
+                <div>
+                <a href=${link}>You have won 1 million carrots! 🥕🥕🥕 Get it now!</a>
+                </div>
+                <img src=${imgUrl} alt='marchewka'/>
+                <p>Lorem ipsum, dolor sit amet consectetur adipisicing elit. Tempore ex beatae totam dicta maiores labore quasi, nostrum illo nisi harum esse provident animi accusamus est, ullam, fuga soluta. Cumque, ipsum?</p>
+                `;
+
+5.  Zbudujemy frontend do wysylania maila.
+    5.1. Stworzymy sobie do obslugi wysylania maila wlasna abstrakcje.
+        const sendMail = async () => {
+            // send mail with defined transport object
+            const info = await transporter.sendMail({
+                from: { name: "Fred Foo", address: "foo@example.com" }, // sender address
+                to: ["bar@example.coom", "baz@example.com"], // list of receivers
+                subject: `Hello ${new Date().toISOString()}`, // Subject line
+                text: "Hello there", // plain text body
+                html: templateHtml, // html body
+            });
+
+            console.log(`Email sent: ${info.messageId}`, { info });
+
+            const previewUrl = nodemailer.getTestMessageUrl(info);
+
+            console.log(`Preview URL: ${previewUrl}`);
+        };
+    5.2. Uporzadkujemy troche nasze foldery. Stworzymy nowy folder o nazwie src. Do niego przeniesiemy sender.js
+    
+    5.3. Zainstalujemy expressa
+        npm i express
+
+    5.4. W folderze src stworzymy plik server.js
+        import express from "express";
+
+        const app = express();
+
+        app.post("/emails/send", (req, res) => {});
+
+        const PORT = 3000;
+        app.listen(PORT, () => {
+            `Server listening on port: ${PORT}...`;
+        });
+
+    5.3. W package.json dodamy skrypt do uruchamiania servera
+        "scripts": {
+            "start": "node ./src/server.js"
+        }
+    
+    5.4. Stworzymy prosty frontend dla naszego zapytania.
+        5.4.1. W folderze src stworzymy folder public
+        5.4.2. Stworzmy index.html
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8" />
+                <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+                <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+                <title>Email sender</title>
+            </head>
+            <body></body>
+            </html>
+
+    5.5. w pliku server.js 
+        5.5.1. zaimportujemy obsluge path
+            import path from "path"
+        
+        5.5.2. przed post route dodamy obsluge plikow statycznych
+            app.use("/", express.static(path.join("src", "public")));
+
+        5.5.3. teraz jak uruchomimy serwer i wejdziemy na adres localhost:3000/index.html to otrzymamy nasza strone.
+
+    5.4. Jak juz nasz html dziala to zbudujemy sobie formularz
+        <body>
+        <main>
+        <h1>Email sender</h1>
+            <form>
+                <label>
+                From:
+                <input type="text" placeholder="Name" required />
+                </label>
+
+                <label>
+                Email:
+                <input type="email" placeholder="Email" required />
+                </label>
+
+                <label>
+                To:
+                <input type="email" placeholder="Email" required />
+                <button type="button">Add recipient</button>
+                </label>
+
+                <label>
+                Subject:
+                <input type="text" placeholder="Subject" />
+                </label>
+
+                <label
+                >Plain text:
+                <textarea name="plainText" id="" cols="30" rows="10"></textarea>
+                </label>
+
+                <label
+                >Html text:
+                <textarea name="htmlText" id="" cols="30" rows="10"></textarea>
+                </label>
+
+                <button>Send</button>
+            </form>
+        </main>
+        </body>
+
+    5.5. W folderze public tworzymy style.css i linkujemy go do html
+        <link rel="stylesheet" href="style.css" />
+
+    5.6. W folderze public dodajemy skrypt i importujemy go do index.html
+        5.6.1. Piszemy skrypt dodawania recipientow:
+            const createRecipientInput = () => {
+                const label = document.createElement("label");
+                const labelText = document.createTextNode("To:");
+                const input = document.createElement("input");
+                input.type = "email";
+                input.className = "alignSelfStretch";
+                input.placeholder = "Recipient email";
+                input.required = true;
+
+                const inputLabeled = label.appendChild(labelText);
+                return input;
+            };
+
+            const addRecipientBtn = document.querySelector("button#add-recipient");
+
+            addRecipientBtn.addEventListener("click", () => {
+                const recipientInput = createRecipientInput();
+                addRecipientBtn.insertAdjacentElement("beforebegin", recipientInput);
+            });
+        5.6.2. piszemy skrypt do wysylania maila
+            const submitEmail = async (event) => {
+                event.preventDefault();
+
+                // pobieramy wartosci z inputow
+                const senderName = document.querySelector("input#senderName").value;
+                const senderEmail = document.querySelector("input#senderEmail").value;
+                const recipientsInput = document.querySelectorAll("#recipients > input");
+                const recipients = [...recipientsInput].map((input) => input.value);
+                const subject = document.querySelector("input#subject").value;
+
+                // pobieramy wartosci z textArea
+                const text = document.querySelector("textarea#plainText").value;
+                const html = document.querySelector("textarea#htmlText").value;
+
+                // zapisujemy wszystkie dane w jednym obiekcie
+                const emailPayload = {
+                    from: {
+                        name: senderName,
+                        address: senderEmail,
+                    },
+                    to: recipients,
+                    subject,
+                    text,
+                    html,
+                };
+
+                console.log({ emailPayload });
+
+                // piszemy metode do wysylania zapytania
+                const response = await fetch("/email/send", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(emailPayload),
+                })
+                    .then((res) => res.json())
+                    .catch(console.error);
+
+                // wiadomosc po wyslaniu formularza
+                alert(JSON.stringify(response, null, 2));
+                };
+
+6. w pliku sender dodamy zmienna ktora otrzymamy z zewnatrz i dzieki temu bedziemy miec funkcje dynamiczna. Dodamy zwracanie info i wyeksportujemy funkcje.
+    export const sendMail = async (mailOptions) => {
+        const info = await transporter.sendMail(mailOptions);
+        const previewUrl = nodemailer.getTestMessageUrl(info);
+
+        console.log(`Email sent: ${info.messageId}`, { info });
+        console.log(`Preview URL: ${previewUrl}`);
+
+        // zwrocimy info
+        return info;
+    };
+
+7. W pliku server dodamy jeszcze pare rzeczy do obslugi backendu
+    6.1. w server.js dodajemy obsluge danych jason
+        app.use(express.json())
+    
+    6.2. importujemy sendMail
+        import { sendMail } from "./sender";
+
+    6.2. Rozbudujemy metode post post. Zrobimy a asynchroniczna. Dodamy obsluge req.body i wysylania maila.
+        app.post("/email/send", async (req, res) => {
+            try {
+                const info = await sendMail(req.body);
+                res.status(200).json({ msg: "Message sent", info });
+            } catch (error) {
+                res.status(500).json({ msg: "Something went wrong" });
+            }
+        });
+
+8. Mozemy teraz wyslac wiadomosc i dostaniemy odpowiedz ktora ustawilismy w script jako alert. Mozemy teraz sie zalogowac do ethereal mail z naszymi credentials z .env i zobaczyc jakie wiadomosci dostalismy :D
+
+
+## Sendgrid - sprawa wyglada podobnie do nodemailera
+
+1. instalujemy sendgrida
+    npm i sendgrid
+
+2. kopiujemy konfiguracje z dokumentacji i zmieniamy odpowiednio dane do wysylania maila.
+
+3. Mozemy go podpiac pod ten sam frontend co nodemailer albo po prostu uruchomic serve.js i wyslemy maila na podany adres. Moze wyladowac w spamie.

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="./style.css" />
+    <title>Email sender</title>
+
+    <script src="./script.js" defer></script>
+  </head>
+  <body>
+    <main class="column">
+      <h1>Email sender</h1>
+      <form class="column" id="emailForm">
+        <div class="column aligLeft">
+          <label class="row">
+            From:
+            <input type="text" id="senderName" placeholder="Name" required />
+            <input type="email" id="senderEmail" placeholder="Email" required />
+          </label>
+
+          <div class="column alignSelfStretch" id="recipients">
+            <label class="row alignSelfStretch">
+              To:
+              <input
+                class="flexGrow1"
+                id="recipientEmail"
+                type="email"
+                placeholder="Recipient email"
+                required
+              />
+            </label>
+            <button type="button" id="add-recipient">Add recipient</button>
+          </div>
+
+          <label class="column alignSelfStretch">
+            Subject:
+            <input
+              class="alignSelfStretch"
+              id="subject"
+              type="text"
+              placeholder="Subject"
+            />
+          </label>
+        </div>
+
+        <label class="column alignSelfStretch">
+          Plain text:
+          <textarea
+            class="alignSelfStretch"
+            name="plainText"
+            id="plainText"
+            rows="5"
+          ></textarea>
+        </label>
+
+        <label class="column alignSelfStretch">
+          Html text:
+          <textarea
+            class="alignSelfStretch"
+            name="htmlText"
+            id="htmlText"
+            rows="5"
+          ></textarea>
+        </label>
+        <button type="submit" class="btn send">Send</button>
+      </form>
+    </main>
+  </body>
+</html>

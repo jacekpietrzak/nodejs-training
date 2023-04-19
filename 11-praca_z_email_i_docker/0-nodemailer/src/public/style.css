@@ -1,0 +1,41 @@
+.column {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+}
+.row {
+  display: flex;
+  flex-direction: row;
+  gap: 0.5rem;
+}
+
+.aligLeft {
+  align-items: flex-start;
+}
+
+.alignSelfStretch {
+  align-self: stretch;
+}
+
+.alignItemsStretch {
+  align-items: stretch;
+}
+
+.flexGrow1 {
+  flex-grow: 1;
+}
+
+.flexWrap {
+  flex-wrap: wrap;
+}
+
+.btn {
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+}
+
+.btn.send {
+  width: 100%;
+}
