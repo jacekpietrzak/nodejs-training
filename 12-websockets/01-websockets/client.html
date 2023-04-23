@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Websocket Client</title>
+  </head>
+  <body>
+    <h1>Websocket Client</h1>
+    <a href="./client.html" target="_blank">Open another client</a>
+
+    <form>
+      <input type="text" id="msg" />
+      <button type="submit">Submit</button>
+    </form>
+
+    <ul id="chat"></ul>
+  </body>
+  <script>
+    // skrypt do obslugi chatu
+    // tworzymy funkcje tworzaca element li z wiadomoscia
+    const createChatMessage = (msg) => {
+      const li = document.createElement("li");
+      li.textContent = msg;
+      return li;
+    };
+
+    // tworzymy zmienna w ktorej bedziemy tworzyc dynamicznie wiadomosci
+    const chatElement = document.querySelector("ul#chat");
+
+    // stworzylismy klienta (polaczenie websocketowe) ktory laczy sie z serwerem i reaguje na nasza wiadomosc
+    const ws = new WebSocket("ws://localhost:1337");
+
+    // jesli dostaniemy wiadomosc to ja odczytujemy logujemy i renderujemy do html
+    ws.onmessage = (event) => {
+      const msg = event.data;
+      console.log(msg);
+
+      // tworzymy elementy w html uzywajac poprzednio utworzonej metody i zmiennej
+      const messageElement = createChatMessage(msg);
+      chatElement.appendChild(messageElement);
+    };
+
+    // skrypt do wysylania wiadomosci
+    // pobieramy input
+    const msgInput = document.querySelector("input#msg");
+    //ustalamy akcje dla form
+    document.querySelector("form").addEventListener("submit", (event) => {
+      event.preventDefault();
+
+      // pobieramy value z inputa wraz z usunieciem (trim) whitespace z kazdego konca.
+      const msg = msgInput.value.trim().toString();
+
+      // wysylamy wiadomosc za pomoca websocket
+      // zabezbieczymy ze jesli nie ma wiadomosci to nic sie nie dzieje
+      if (!msg) return;
+      ws.send(msg);
+      //usuwamy zawartosc inputa po wyslaniu wiadomosci
+      msgInput.value = "";
+    });
+  </script>
+</html>

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chat socket.io</title>
+    <link rel="stylesheet" href="./style.css" />
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script src="./script.js" defer></script>
+  </head>
+  <body class="app column">
+    <header class="header row">
+      <div class="headerWrapper container">
+        <h1 class="title">SocketChat.io</h1>
+        <p><a href="./index.html" target="_blank">Open another client ></a></p>
+      </div>
+    </header>
+
+    <main class="main column container">
+      <div class="chatHeader row">
+        <form class="column gap10" id="name-form">
+          <div>Your name: <span id="name-display"></span></div>
+          <label>
+            Change your name:
+            <input class="input" type="text" id="name" placeholder="New name" />
+            <button class="button" type="submit">Change name</button>
+          </label>
+        </form>
+        <div>Online: <span id="online"></span></div>
+      </div>
+
+      <ul class="column chatList" id="chatList"></ul>
+    </main>
+
+    <footer class="footer">
+      <form class="row container section" id="chat">
+        <input class="inputChat" type="text" id="msg" placeholder="Message" />
+        <button class="button" type="submit">Send</button>
+      </form>
+    </footer>
+  </body>
+</html>

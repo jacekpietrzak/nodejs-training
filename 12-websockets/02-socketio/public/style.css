@@ -1,0 +1,120 @@
+* {
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
+    "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.app {
+  height: 100vh;
+  color: #333;
+  background-color: rgb(244, 244, 244);
+}
+
+.row {
+  display: flex;
+  flex-direction: row;
+}
+
+.gap5 {
+  gap: 5px;
+}
+.gap10 {
+  gap: 10px;
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+}
+
+.container {
+  width: 800px;
+  padding-left: 30px;
+  padding-right: 30px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.section {
+  padding-top: 15px;
+  padding-bottom: 15px;
+}
+
+.header {
+  height: 60px;
+  background-color: #fff;
+}
+
+.headerWrapper {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.title {
+  font-size: 20px;
+  font-weight: 500;
+}
+
+.main {
+  height: calc(100vh - 120px);
+  flex-grow: 2;
+  gap: 15px;
+  padding-top: 15px;
+}
+
+.chatHeader {
+  justify-content: space-between;
+  gap: 15px;
+}
+
+.chatList {
+  gap: 5px;
+  overflow-y: scroll;
+  flex-grow: 1;
+  padding-bottom: 5px;
+  padding-right: 5px;
+}
+
+.footer {
+  height: 60px;
+  background-color: #fff;
+}
+
+.chatElement {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: 5px 10px;
+  list-style: none;
+  background-color: #fff;
+  border-radius: 5px;
+}
+
+.button {
+  padding: 5px 10px;
+  border-radius: 5px;
+  border-width: 2px;
+  cursor: pointer;
+}
+
+.input {
+  padding: 5px 10px;
+  border-radius: 5px;
+  border-width: 2px;
+}
+
+.inputChat {
+  padding: 5px 10px;
+  border-radius: 5px;
+  border-width: 2px;
+  flex-grow: 1;
+}

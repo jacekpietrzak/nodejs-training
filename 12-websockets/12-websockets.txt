@@ -1,0 +1,393 @@
+komendy w terminalu
+ - echo node_modules > .gitignore - tworzy nam plik .gitignore w ktorym mamy zapisane node_modules
+ - touch server.js - tworzy plik server.js
+
+## Websockets
+Websockets to protokol dwustronnej wymiany danych. Jest to inny protokol komunikacji niz http. 
+Aby zaczac
+
+1. instalujemy pakiet WS websocket
+    npm i ws
+
+2. instalujemy nanoid aby tworzyc unikalne id
+    npm i nanoid
+
+3. instalujemy nodemon
+    npm i -D nodemon
+
+4. w glownym foderze tworzymy plik server.js
+    4.1. tworzymy serwer websocketowy. Aby to zrobic to musimy najpierw zaimportowac websocket:
+        import ws from "ws"
+
+        ale ze my potrzebujemy tylko serwer to zaimportujemy jedynie serwer z calej paczki:
+            import { WebSocketServer } from "ws";
+
+    4.2. jak juz mamy zaimportowana paczke to tworzymy nowa instancje obiektu WebSocketServer i nadamy mu port pod ktory bedizemy mogli sie laczyc.
+        const server = new WebSocketServer({ port: 1337 });
+
+    4.3. websocket dziala na innym protokole niz http dlatego aby sie do nieglo podlaczyc potrzebujemy clienta ktory jest skonfigurowany do tego. Wykorzystamy strone websocketking.com w ktorym podamy adres z naszym portem i protokolem "ws" przed nim:
+        ws://localhost:1337
+        
+5. w glownym folderze tworzymy client.html
+    5.1. dodamy skrypt ktory bedzie laczyl sie z nasyzm serwerem websocketowym.
+        uzyjemy obiektu WebSocket ktory przypiszemy do zmiennej ws
+            ws = new WebSocket("url do ktorego chcemy sie podlaczyc wraz z protokolem")
+            ws = new WebSocket("ws://localhost:1337")
+
+6. Wysylanie wiadomosci z serwera na fronend w pliku server.js dodamy do listenera server.on:
+    6.1. jesli sie polaczymy to wyslemy cos do naszego klienta ktory sie polaczyl.
+        socket.send("wiadomosc")
+
+    6.2. aby wyswietlic ta wiadomosc to musimy jej nasluchiwac na frontendzie i napisac kod ktory obsluzy nam ta wiadomosc. Rozszerzymy do tego skrypt po stronie htmla
+        ws.onmessage = (event) => {
+            console.log(event.data);
+        };
+    po tym kroku dostaniemy wiadomosc ktora ustalilismy po stronie servera w konsoli.
+
+7. Wysylanie wiadomosci z frontendu na backend
+na stronie websocketking.com po podlaczeniu sie do serwera mamy mozliwosc wyslania wiadomosc. Nie mamy jednak tego obsluzonego po stronie serwera. Aby to zrobic musimy dodac do server.on:
+    socket.on("message", (data) => {
+        console.log(data.toString()); // data dostajemy w formacie buffer wiec aby ja przeczytac musimy przekonwertowac ja na string
+    });
+
+8. Obsluga wielu klientow. W tym momencie mamy ustawiona rozmowe miedzy klientem a serwerem. Zrobimy sobie cos takiego ze jak jeden klient wysle to cala reszta otrzyma ta wiadomosc. Dodamy w server.js 
+    8.1. Importujemy nanoid
+    8.2. w server.on dodamy zmienna clientId 
+        const clientId = nanoid();
+    8.3. tworzymy liste klientow przed metoda server.on:
+        const clients = new Map()
+    8.4. ustalamy klientow w metodzie server.on:
+        clients.set(clientId, socket);
+    8.5. wysylamy wiadomosc do wszystkich klientow:
+        [...clients.values()].forEach((client) => client.send("somebody connected"));
+    8.6. refaktorujemy wysylanie wiadomosci do wszystkich klientow w metodzie server.on:
+
+9. Dodamy mozliwosc wysylania wiadomosci z naszego klienta html
+    9.1. dodajemy formularz do client.html
+        <form>
+            <input type="text" id="msg" />
+            <button type="submit">Submit</button>
+        </form>
+    9.2. dodajemy skrypt ponizej formularza do obslugi wysylania wiadomosci:
+        <script>
+            // pobieramy input
+            const msgInput = document.querySelector("input#msg");
+            //ustalamy akcje dla form
+                document.querySelector("form").addEventListener("submit", (event) => {
+                event.preventDefault();
+
+                // pobieramy value z inputa wraz z usunieciem (trim) whitespace z kazdego konca.
+                const msg = msgInput.value.trim().toString();
+
+                // wysylamy wiadomosc za pomoca websocket
+                // zabezbieczymy ze jesli nie ma wiadomosci to nic sie nie dzieje
+                if (!msg) return;
+                ws.send(msg);
+            });
+        </script>
+    9.3. mamy obsluge rozmowy narazie w konsoli. Zrobmy ja w html. 
+        9.3.1. dodamy liste ul w html
+        9.3.2. stworzymy funkcje do obslugi wyswietlania chatu.
+            // skrypt do obslugi chatu
+            // tworzymy funkcje tworzaca element li z wiadomoscia
+            const createChatMessage = (msg) => {
+            const li = document.createElement("li");
+            li.textContent = msg;
+            return li;
+            };
+
+            // tworzymy zmienna w ktorej bedziemy tworzyc dynamicznie wiadomosci
+            const chatElement = document.querySelector("ul#chat");
+
+            // stworzylismy klienta ktory laczy sie z serwerem i reaguje na nasza wiadomosc
+            const ws = new WebSocket("ws://localhost:1337");
+            ws.onmessage = (event) => {
+                const msg = event.data;
+                console.log(msg);
+
+                // tworzymy elementy w html uzywajac poprzednio utworzonej metody i zmiennej
+                const messageElement = createChatMessage(msg);
+                chatElement.appendChild(messageElement);
+            };
+
+
+
+## socket.io
+
+Jesli wejdziemy na strone dokumentacji to tam mamy 2 dzialy Server API i Client API
+
+1. Zaczniemy od stworzenia serwera
+    
+    1.1. zainstalujemy socket io
+        npm i socket.io
+    
+    1.2. instalujemy expressa aby moc podpiac sie pod serwer expressa zeby moc wyrenderowac sobie nasza strone
+        npm i express
+    
+    1.3. instalujemu nodemon
+        npm i nodemon
+    
+    1.4. tworzymy server.js
+        touch server.js
+    
+    1.5. tworzymy plik .gitignore z wpisanym node_modules
+        echo node_modules > .gitignore
+    
+    1.6. w package.json dodajemy skrypty i okreslamy tym module
+        "type": "module",
+        "scripts": {
+            "start": "node server.js",
+            "dev": "nodemon server.js"
+        },
+    
+    1.7. w pliku server.js tworzymy startowa konfiguracje dla socket.io:
+        import http from "http";
+
+        import express from "express";
+
+        // importujemy server z socket.io ale nadamy mu wlasna nazwe SocketServer
+        import { Server as SocketServer } from "socket.io";
+
+        // Tworzenie api dla socket io
+        const app = express();
+        // tworzmy server http i przekazemy mu aplikacje expresowa
+        const httpServer = http.createServer(app);
+        // tworzymy socker server i jemu przekazujemy http server
+        const io = new SocketServer(httpServer);
+        //tworzymy port
+        const PORT = 3000;
+
+        // uruchamiamy serwer
+        httpServer.listen(PORT, () => {
+            console.log(`Server running on port ${PORT} ...`);
+        });
+
+    1.8. dodajemy middleware do obslugi publicznego statycznego folderu i tworzymy folder public:
+        app.use(express.static("public"));
+
+    1.9. w public tworzymy index.html
+
+    1.10. teraz po odpaleniu serwera pokaze na msie nasz index.html
+
+    1.11. Mamy dzialajacy serwer. Teraz mozemy zaczac implementacje obslugi czatu za pomoca socket.io
+
+    1.12. Tworzymy mape userow:
+        const clients = new Map();
+
+    1.13. Obslugujemy co ma sie stac przy polaczeniu. Narazie wyslemy wiadomosc:
+        io.on("connection", (socket) => {
+            socket.send("hello");
+        });        
+
+    1.12. aby obsluzyc otrzymywanie wiadomosci z klienta rozbudujemy funkce io.on w pliku server.js o:
+        io.on("connection", (socket) => {
+            socket.send("hello!");
+
+            socket.on("message", (msg) => {
+                //  wypisujemy po stronie serwera
+                console.log(msg);
+            });
+        });
+
+    1.13. Obslugujemy rejestracje uzytkownika po stronie serwera:
+        // tworzymy id
+        const id = socket.id;
+
+        // tworzymy mape klientow
+        clients.set(id, socket);
+
+        // wyslemy wiadomosc do wszystkich poza socketem ktory wysyla te wiadomosc
+        socket.broadcast.emit("message", `[${id}] has joined.`);
+
+    1.14. obsluzymy wysylanie wiadomosc do wszystkich na czacie. Do tego musimy rozbudowac socket.on("message", (msg)=>{}):
+        1.14.1. utworzymy funkcje pomocnicza typu closures pomocnicza do wysylania wiadomosci dla wszystkich:
+            const createBroadcaster =
+        (socket) =>
+        (data, event = "message") => {
+            console.log(data);
+            socket.emit(event, data);
+            socket.broadcast.emit(event, data);
+        };
+
+        1.14.2. dodajemy zmienna z przypisana funkcja do io.on:
+            const broadcast = createBroadcaster(socket);
+
+        1.14.3. uzywamy tej zmiennej w socket.on:
+            socket.on("message", (data) => {
+                // deklarujemy jak ma wygladac wiadomosc
+                const msg = `[${socket.id}] sent: ${data}`;
+                // wyswietlamy wiadomosc z klienta po stronie serwera dla wszystkich klientow uzywajac stworzonej wczesniej funkcji createBroadcaste ktora jest przypisana do zmiennej broadcast
+                broadcast(msg);
+            });
+
+    1.15 dodamy obsluge powiadamiania ze klient opuscil czat i usuwanie z mapy.
+        socket.on("disconnect", () => {
+            // Unregister when user drops connection
+            clients.delete(id);
+
+            // Notify otehers when user is leaving
+            const msg = `[${id}] has left the room.`;
+            console.log(msg);
+            broadcast(msg);
+        });
+
+    1.16. Dodamy mozliwosc zmiany imienia
+        1.16.1. po stronie klienta dodamy interfejs i kod w script.js
+        1.16.2. po stronie serwera dodamy 
+            // tworzymy mape klientow
+            clients.set(id, id);
+
+            // zmiana imienia
+            // W momoenicek iedy klient sie polaczy wysylamy jakie ma imie
+            socket.emit("name", id);
+            socket.on("name", (name) => {
+                // pobieramy stare imie
+                const oldName = clients.get(id);
+
+                // ustalamy nowe imie
+                clients.set(id, name);
+                socket.emit("name", name);
+                // powiadamiamy innych o zmianie imienia
+                broadcast(`${oldName} changed name to ${name}`);
+            });
+
+    1.17. dodamy mozliwosc wyswietlania liczby klientow
+        dodamy narazie w funkcji createBroadcast:
+        console.log(`active clients: (${clients.size}) `);
+
+        // wyswietlanie ilosci uzytkownikow
+        broadcast(clients.size, "online");
+
+        musimy tez ta funkcje dodac do socket.on("disconnect)
+
+    1.18. opcja pokazania ostatnich 10 wiadomosc:
+        // making last 10 messages available
+        // zmienna w ktorej bedziemy trzymac ostatnie 10 wiadomosci - database
+        const messages = [];
+
+        app.get("/messages", (req, res) => {
+            const last = req.query.last || 10;
+
+            const lastMsgs = messages.slice(0, 10).reverse();
+
+            res.json({ messages: lastMsgs });
+        });
+
+    1.20. dodamy do funkcji broadcast linijke aby zapisywal wiadomosci w naszej zmiennej
+        if (event === "message") messages.unshift(data);
+
+2. Tworzenie clienta
+    2.1. tworzymy plik script.js ktory podepniemy do index.html
+        <script src="./script.js" defer></script>
+        
+    2.2. Importujemy socket.io poprzez cdn podpinajac go w head w index.html
+        <script src="https://cdn.socket.io/4.3.2/socket.io.esm.min.js"></script>
+
+    2.3. w script.js stworzymy polaczenie z websocket.
+        const socket = io();
+
+        socket.on("connect", () => {
+            console.log("Connected");
+        });
+
+    2.4. w script.js dodamy obsluge on(message). Obsluzylismy wyswietlanie wiadomosci od strony serwera
+        socket.on("message", (message) => {
+            console.log(message);
+        });
+
+    2.5. w index html tworzymy form i liste ul gdzie beda pojawiac sie wiadomosci:
+        <main>
+            <h1>Chat Socket.io</h1>
+            <form>
+                <input type="text" name="" id="msg" />
+                <button type="submit">Send</button>
+            </form>
+
+            <ul id="chat"></ul>
+        </main>
+
+    2.6. Aby obsluzyc wysylanie wiadomosci na serwer w script.js dodamy:
+        // bierzemy input o id msg
+        const msgInput = document.querySelector("input#msg");
+
+        // bierzemy formularz o id chat i na nim robimy addEventListener ktory na event submit wysyla wiadomosc
+        document.querySelector("form#chat").addEventListener("submit", (event) => {
+            // zapobiegamy przeladowania formularza przy submit
+            event.preventDefault();
+
+            // pobieramy wiadomosc z inputa
+            const msg = msgInput.value.trim();
+
+            // jesli niema nic w input to nie zwracamy nic
+            if (!msg) return;
+
+            // jesli jest cos w input to wysylamy wiadomosc
+            socket.send(msg);
+
+            // po wyslaniu wiadomosci czyscimy input
+            msgInput.value = "";
+        });
+
+    2.7. zbudujemy mozliwosc zmiany imienia przez uzytkownika
+        2.7.1. dodamy interfejs w html:
+            <form method="post" id="name-form">
+                <div>Name:<span id="name-display"></span></div>
+                <label>
+                    Update your name:
+                    <input type="text" id="name-input" placeholder="Updated name" />
+                </label>
+                <button type="submit">Change name</button>
+            </form>
+
+        2.7.2.  dodamy do kodu script.js:
+            // zmiana imienia
+            //* dodajemu kod ktory pozwoli na zmiane imienia uzytkownika *//
+            socket.on("name", (name) => {
+                console.log(`Your name: ${name}`);
+                document.querySelector("span#name-display").textContent = name;
+            });
+            // pobieramy formularz zmiany imienia
+            document.querySelector("form#name-form").addEventListener("submit", (event) => {
+                event.preventDefault();
+
+                // pobieramy value z inputa
+                const input = document.querySelector("input#name");
+                const newName = document.querySelector("input#name").value.trim();
+
+                if (!newName) return;
+                socket.emit("name", newName);
+                input.value = "";
+            });
+
+    2.8. dodamy mozliwosc wyswietlania liczby klientow
+        2.8.1. dodajemy miejsce wyswietlania w html:
+            <div>Online: <span id="online"></span></div>
+
+        2.8.2. w pliku script.js dodamy:
+            // wyswietlanie ilosci uzytkownikow
+                socket.on("online", (online) => {
+                    document.querySelector("span#online").textContent = online;
+                });
+
+    2.9. dodamy mozliwosc wyswietlania 10 ostatnich wiadomosci.
+        // obsluga wyswietlania ostatnich 10 wiadomosci
+        fetch("messages?last=10").then((res) =>
+            res
+                .json()
+                .then(({ messages }) => {
+                    const msgElements = messages.map((msg) => createChatMessage(msg));
+                    const fragment = document.createDocumentFragment();
+                    fragment.append(...msgElements);
+                    chatElement.appendChild(fragment);
+            })
+                .catch(console.error)
+        );
+
+    2.10. dodamy opcje automatycznego skrolowania do dolu
+        // scroll to bottom while teksting
+        chatElement.scrollTop = chatElement.scrollHeight;    
+    
+
+
+3. mozna otworzyc komputer dla innych narzedziem do tunelowania ngrok
+    ngrok http nrPortu
