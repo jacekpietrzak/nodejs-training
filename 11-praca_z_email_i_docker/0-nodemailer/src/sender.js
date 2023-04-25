@@ -21,6 +21,7 @@ const getAuth = async () => {
 };
 
 const auth = await getAuth();
+console.log({ auth });
 
 // template ktorego ostatecznie nie uzywamy
 const templateHtml = `
@@ -44,8 +45,28 @@ const config = {
   },
 };
 
+// AGA\
+
+const configAga = {
+  host: "smtp.ethereal.email",
+  port: 587,
+  secure: false,
+  auth: {
+    user: "aidan.marks@ethereal.email",
+    pass: "uBYRBSsE2SkKmczhHv",
+  },
+};
+
 // create reusable transporter object using the default SMTP transport
 const transporter = nodemailer.createTransport(config);
+
+const info = await transporter.sendMail({
+  from: '"Fred Foo 👻" <foo@example.com>', // sender address
+  to: "bar@example.com, baz@example.com", // list of receivers
+  subject: "Hello ✔", // Subject line
+  text: "Hello world?", // plain text body
+  html: "<b>Hello world?</b>", // html body
+});
 
 export const sendMail = async (emailOptions) => {
   // send mail with defined transport object
